@@ -48,7 +48,7 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    */
   public function createItem($data) {
     $record = new stdClass();
-    $record->name = $this->name;
+    $record->name = $this->tube;
     $record->data = $data;
     $record = serialize($record);
     
