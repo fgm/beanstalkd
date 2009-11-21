@@ -1,0 +1,25 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Provide core implementation of beanstalkd support for Queues
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function beanstalkd_menu() {
+  $items = array();
+  
+  $items['admin/structure/beanstalkd'] = array(
+    'title' => 'Beanstalkd',
+    'description' => 'Configuration settings Beanstalk integration for Queues',
+    'access arguments' => array('access administration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('beanstalkd_admin_settings'),
+    'file' => 'beanstalkd.admin.inc',
+  );
+  
+  return $items;
+}
