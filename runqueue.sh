@@ -81,7 +81,7 @@ $_SERVER['SCRIPT_NAME']     = '/' . basename($_SERVER['SCRIPT_NAME']);
 $_SERVER['HTTP_USER_AGENT'] = 'console';
 
 // toggle verbose mode
-$_verbose_mode = isset($args['h']) || isset($args['help']) ? TRUE : FALSE;
+$_verbose_mode = isset($args['v']) || isset($args['verbose']) ? TRUE : FALSE;
 
 // parse invocation arguments
 if (isset($args['r']) || isset($args['root'])) {
