@@ -121,6 +121,11 @@ ini_set('display_errors', TRUE);
 include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
+if (drupal_is_cli() && ini_get('output_buffering')) {
+  flush();
+  ini_set('output_buffering', 0);
+}
+
 $names = array_keys(beanstalkd_get_queues());
 
 if (isset($args['l']) || isset($args['list'])) {
