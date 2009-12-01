@@ -83,8 +83,6 @@ $_SERVER['HTTP_USER_AGENT'] = 'console';
 // toggle verbose mode
 $_verbose_mode = isset($args['h']) || isset($args['help']) ? TRUE : FALSE;
 
-$maintenance = TRUE;
-
 // parse invocation arguments
 if (isset($args['r']) || isset($args['root'])) {
   // change working directory
@@ -123,19 +121,24 @@ ini_set('display_errors', TRUE);
 include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
+$names = array_keys(beanstalkd_get_queues());
+
+if (isset($args['l']) || isset($args['list'])) {
+  if (!empty($names)) {
+    echo t("Available beanstalkd queues:\n\n@queues\n\n", array('@queues' => implode("\n", $names)));
+  }
+  else {
+    echo t('No queues available');
+  }
+  exit();
+}
+
 $queue = new BeanstalkdQueue(NULL);
 
 foreach ($args as $arg => $option) {
   switch ($arg) {
-    case 'l':
-      $queues = beanstalkd_get_queues();
-      
-      if (!empty($queues)) {
-        echo t("Available beanstalkd queues:\n\n@queues\n\n", array('@queues' => implode("\n", array_keys($queues))));
-      }
-      else {
-        echo t('No queues available');
-      }
+    
   }
 }
+
 exit();
