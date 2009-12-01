@@ -3,6 +3,23 @@
 // $Id$
 
 /**
+ * beanstalkd_get_queues().
+ */
+function beanstalkd_get_queues() {
+  $queues = module_invoke_all('cron_queue_info');
+  drupal_alter('cron_queue_info', $queues);
+  
+  foreach ($queues as $queue => $settings) {
+    $name = 'queue_module_' . $queue;
+    if (variable_get($name, 'System') != 'Beanstalkd') {
+      unset($queues[$queue]);
+    }
+  }
+  
+  return $queues;
+}
+
+/**
  * Drupal shell execution script
  */
 
@@ -106,18 +123,12 @@ ini_set('display_errors', TRUE);
 include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
+$queue = new BeanstalkdQueue(NULL);
+
 foreach ($args as $arg => $option) {
   switch ($arg) {
     case 'l':
-      $queues = module_invoke_all('cron_queue_info');
-      drupal_alter('cron_queue_info', $queues);
-      
-      foreach ($queues as $queue => $settings) {
-        $name = 'queue_module_' . $queue;
-        if (variable_get($name, 'System') != 'Beanstalkd') {
-          unset($queues[$queue]);
-        }
-      }
+      $queues = beanstalkd_get_queues();
       
       if (!empty($queues)) {
         echo t("Available beanstalkd queues:\n\n@queues\n\n", array('@queues' => implode("\n", array_keys($queues))));

@@ -28,7 +28,9 @@ class BeanstalkdQueue implements DrupalQueueInterface {
       Pheanstalk_ClassLoader::register(drupal_get_path('module', 'beanstalkd') . '/pheanstalk/classes');
       
       $this->beanstalkd_queue = new Pheanstalk(variable_get('beanstalkd_host', 'localhost'), variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT));
-      $this->beanstalkd_queue->useTube($this->_tubeName($name));
+      if ($name) {
+        $this->beanstalkd_queue->useTube($this->_tubeName($name));
+      }
     }
     else {
       $this->beanstalkd_queue = FALSE;
