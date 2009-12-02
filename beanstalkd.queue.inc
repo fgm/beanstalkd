@@ -105,6 +105,19 @@ class BeanstalkdQueue implements DrupalQueueInterface {
      */
     return FALSE;
   }
+  
+  /**
+   * Claim the next item on any of the tubes which are being watched. Since this is a blocking
+   * method it will not return until and item is claimed.
+   */
+  public function claimItemBlocking() {
+    $job = $this->beanstalkd_queue->reserve();
+
+    $item = unserialize($job->getData());
+    $item->id = $job->getId();
+    $item->beanstalkd_job = $job;
+    return $item;
+  }
 
   /**
    * Delete a finished item from the queue.
@@ -136,6 +149,36 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    */
   public function deleteQueue() {
     
+  }
+  
+  /**
+   * watch message queue
+   */
+  public function watch($names) {
+    $names = is_string($names) ? array($names) : $names;
+    $names = array_map(array($this, '_tubeName'), $names);
+    
+    $tubes = $this->beanstalkd_queue->listTubes();
+    $names = array_intersect($tubes, $names);
+    
+    foreach ($names as $name) {
+      $this->beanstalkd_queue->watch($name);
+    }
+  }
+  
+  /**
+   * Queues to ignore
+   */
+  public function ignore($names) {
+    $names = is_string($names) ? array($names) : $names;
+    $names = array_map(array($this, '_tubeName'), $names);
+    
+    $tubes = $this->beanstalkd_queue->listTubes();
+    $names = array_intersect($tubes, $names);
+    
+    foreach ($names as $name) {
+      $this->beanstalkd_queue->ignore($name);
+    }
   }
   
   private function _tubeName($name) {

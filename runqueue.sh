@@ -19,6 +19,39 @@ function beanstalkd_get_queues() {
   return $queues;
 }
 
+function beanstalkd_log($string, $noeol = FALSE) {
+  global $_verbose_mode;
+  
+  if (!$_verbose_mode) {
+    return;
+  }
+  
+  fwrite(STDERR, $string . ($noeol ? '' : "\n"));
+}
+
+function beanstalkd_process() {
+  global $queue;
+  
+  while (1) {
+    beanstalkd_log(t("Waiting for next item to be claimed"));
+    $item = $queue->claimItemBlocking();
+    $queues = beanstalkd_get_queues();
+
+    if (isset($queues[$item->name])) {
+      $info = $queues[$item->name];
+      $function = $info['worker callback'];
+
+      beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
+      $function($item->data);
+      
+      beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
+      $queue->deleteItem($item);
+    }
+
+    drupal_static_reset();
+  }
+}
+
 /**
  * Drupal shell execution script
  */
@@ -89,12 +122,10 @@ if (isset($args['r']) || isset($args['root'])) {
   $path = isset($args['r']) ? $args['r'] : $args['root'];
   if (is_dir($path)) {
     chdir($path);
-    if ($_verbose_mode) {
-      echo "cwd changed to: {$path}\n";
-    }
   }
   else {
-    echo"\nERROR: {$path} not found.\n\n";
+    echo "\nERROR: {$path} not found.\n\n";
+    exit(1);
   }
 }
 
@@ -130,20 +161,37 @@ $names = array_keys(beanstalkd_get_queues());
 
 if (isset($args['l']) || isset($args['list'])) {
   if (!empty($names)) {
-    echo t("Available beanstalkd queues:\n\n@queues\n\n", array('@queues' => implode("\n", $names)));
+    echo (t("Available beanstalkd queues:\n\n@queues\n", array('@queues' => implode("\n", $names))));
   }
   else {
-    echo t('No queues available');
+    echo (t('No queues available'));
   }
   exit();
 }
 
+// Make sure all the tubes are created
+foreach ($names as $name) {
+  DrupalQueue::get($name)->createQueue();
+}
+
 $queue = new BeanstalkdQueue(NULL);
 
-foreach ($args as $arg => $option) {
+/* foreach ($args as $arg => $option) {
   switch ($arg) {
     
   }
+} */
+
+if (empty($names)) {
+  echo "Exiting: No queues available.\n";
+  exit(1);
 }
+
+$queue->watch($names);
+beanstalkd_log(t("Watching the following queues: @queues", array('@queues' => implode(", ", $names))));
+$queue->ignore('default');
+beanstalkd_log(t("Ignoring default queue"));
+
+beanstalkd_process();
 
 exit();
