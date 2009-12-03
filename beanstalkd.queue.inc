@@ -29,7 +29,13 @@ class BeanstalkdQueue implements DrupalQueueInterface {
       
       $this->beanstalkd_queue = new Pheanstalk(variable_get('beanstalkd_host', 'localhost'), variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT));
       if ($name) {
-        $this->beanstalkd_queue->useTube($this->_tubeName($name));
+        // If a queue name  is past then set this tube to be used and set it to be the 
+        // only tube to be watched.
+        $tube = $this->_tubeName($name);
+        $this->beanstalkd_queue
+          ->useTube($tube)
+          ->watch($tube)
+          ->ignore('default');
       }
     }
     else {
@@ -72,7 +78,7 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    *   An integer estimate of the number of items in the queue.
    */
   public function numberOfItems() {
-    $stats = $this->beanstalkd_queue->statsTube($this->tube);
+    $stats = $this->beanstalkd_queue->statsTube($this->_tubeName($this->tube));
     
     return $stats['current-jobs-ready'];
   }
@@ -96,13 +102,13 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    *   problem.
    */
   public function claimItem($lease_time = 3600) {
-    /**
-     * Since Drupal is expecting a non-blocking method of getting the next item on the queue
-     * and Beanstalkd/pheanstalk only has a blocking queue which will break the Drupal cron.
-     * Also since this will be better running this outside of the Apache process in it's own
-     * process so not to bog down the web process. Also it means you could run this off the
-     * web server all together.
-     */
+    $job = $this->beanstalkd_queue->reserve(0);
+    if ($job) {
+      $item = unserialize($job->getData());
+      $item->id = $job->getId();
+      $item->beanstalkd_job = $job;
+      return $item;
+    }
     return FALSE;
   }
   

@@ -26,15 +26,18 @@ function beanstalkd_log($string, $noeol = FALSE) {
     return;
   }
   
-  fwrite(STDERR, $string . ($noeol ? '' : "\n"));
+  echo $string . ($noeol ? '' : "\n");
 }
 
 function beanstalkd_process() {
   global $queue;
   
   while (1) {
-    beanstalkd_log(t("Waiting for next item to be claimed"));
-    $item = $queue->claimItemBlocking();
+    $item = $queue->claimItem();
+    if (!$item) {
+      beanstalkd_log(t("Waiting for next item to be claimed"));
+      $item = $queue->claimItemBlocking();
+    }
     $queues = beanstalkd_get_queues();
 
     if (isset($queues[$item->name])) {
@@ -152,10 +155,8 @@ ini_set('display_errors', TRUE);
 include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
-if (drupal_is_cli() && ini_get('output_buffering')) {
-  flush();
-  ini_set('output_buffering', 0);
-}
+// turn off the output buffering that drupal is doing by default.
+ob_end_flush();
 
 $names = array_keys(beanstalkd_get_queues());
 
