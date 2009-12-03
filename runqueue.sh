@@ -43,12 +43,17 @@ function beanstalkd_process() {
     if (isset($queues[$item->name])) {
       $info = $queues[$item->name];
       $function = $info['worker callback'];
-
-      beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
-      $function($item->data);
       
-      beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
-      $queue->deleteItem($item);
+      try {
+        beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
+        $function($item->data);
+      
+        beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
+        $queue->deleteItem($item);
+      }
+      catch (Exception $e) {
+        beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
+      }
     }
 
     drupal_static_reset();
