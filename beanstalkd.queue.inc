@@ -118,11 +118,13 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    */
   public function claimItemBlocking() {
     $job = $this->beanstalkd_queue->reserve();
-
-    $item = unserialize($job->getData());
-    $item->id = $job->getId();
-    $item->beanstalkd_job = $job;
-    return $item;
+    if ($job) {
+      $item = unserialize($job->getData());
+      $item->id = $job->getId();
+      $item->beanstalkd_job = $job;
+      return $item;
+    }
+    return FALSE;
   }
 
   /**

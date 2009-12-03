@@ -38,24 +38,30 @@ function beanstalkd_process() {
       beanstalkd_log(t("Waiting for next item to be claimed"));
       $item = $queue->claimItemBlocking();
     }
-    $queues = beanstalkd_get_queues();
+    if ($item) {
+      $queues = beanstalkd_get_queues();
 
-    if (isset($queues[$item->name])) {
-      $info = $queues[$item->name];
-      $function = $info['worker callback'];
+      if (isset($queues[$item->name])) {
+        $info = $queues[$item->name];
+        $function = $info['worker callback'];
       
-      try {
-        beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
-        $function($item->data);
+        try {
+          beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
+          $function($item->data);
       
-        beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
-        $queue->deleteItem($item);
-      }
-      catch (Exception $e) {
-        beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
+          beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
+          $queue->deleteItem($item);
+        }
+        catch (Exception $e) {
+          beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
+        }
       }
     }
+    else {
+      sleep(5); // sleep for 5 seconds and try again.
+    }
 
+    drupal_get_messages(); // Clear out the messages so they don't take up memory
     drupal_static_reset();
   }
 }
