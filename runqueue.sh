@@ -80,7 +80,7 @@ $args = @getopt($shortopts, $longopts);
 if (isset($args['h']) || isset($args['help'])) {
   echo <<<EOF
 
-Execute a Drupal page from the shell.
+Beanstalkd Queue manager.
 
 Usage:        {$script} [OPTIONS]
 Example:      {$script} 
@@ -106,7 +106,7 @@ All arguments are long options.
 To run this script without --root argument invoke it from the root directory
 of your Drupal installation with
 
-  ./scripts/{$script}
+  ./{$script}
 
 \n
 EOF;

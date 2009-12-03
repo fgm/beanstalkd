@@ -6,3 +6,63 @@ What is Beanstalkd
 ------------------
 
 Beanstalk is a simple, fast workqueue service. Its interface is generic, but was originally designed for reducing the latency of page views in high-volume web applications by running time-consuming tasks asynchronously.
+
+Requirements
+------------
+
+* beanstalkd needs to be installed and configured.
+* a copy of pheanstalk needs to be checked out and put inside the beanstalkd module directory.
+
+Installation
+------------
+
+1. Install like a normal Drupal module.
+2. Configure on Administer > Structure > Beanstalkd the link to the host and the port for beanstalkd.
+3. Check the queues that will use beanstalkd for the queue manager.
+
+Running
+-------
+
+Beanstalkd will run in a default environment where the messages will be processed during the normal cron run. However this will not give you any of the advantages that Beanstalkd can give you.
+
+In the module directory is the runqueue.sh script will process messages as they are received. This runs in a shell and uses a blocking method of waiting for the messages to be received. This means that as soon as the message has been submitted if a queue manager is waiting it will start processing the message quickly.
+
+Since Beanstalkd has a non-blocking queue manager you can run many queue managers as you want on different machines. 
+
+So in the normal case the cron will run on a single machine in a single thread. However with beanstalkd many message processes as needed across as many machines as you need. Also it means that you can run the queue manages on system that are not your web servers so the processing of the messages will not have any impact on the system except for the intersections between the systems such as the database.
+
+Running the Queue manager
+-------------------------
+
+./runqueue.sh -h
+
+Beanstalkd Queue manager.
+
+Usage:        runqueue.sh [OPTIONS]
+Example:      runqueue.sh 
+
+All arguments are long options.
+
+  -h, --help  This page.
+
+  -r, --root  Set the working directory for the script to the specified path.
+              To execute Drupal this has to be the root directory of your
+              Drupal installation, f.e. /home/www/foo/drupal (assuming Drupal
+              running on Unix). Current directory is not required.
+              Use surrounding quotation marks on Windows.
+  
+  -s, --site  Used to specify with site will be used for the upgrade. If no
+              site is selected then default will be used.
+
+  -l, --list  List available beanstalkd queues
+  
+  -v, --verbose This option displays the options as they are set, but will
+              produce errors from setting the session.
+
+To run this script without --root argument invoke it from the root directory
+of your Drupal installation with
+
+  ./runqueue.sh
+
+
+Running this will process any messages on any Beanstalkd queue.
