@@ -123,12 +123,12 @@ $_SERVER['REMOTE_ADDR']     = '127.0.0.1';
 $_SERVER['SERVER_SOFTWARE'] = 'PHP CLI';
 $_SERVER['REQUEST_METHOD']  = 'GET';
 $_SERVER['QUERY_STRING']    = '';
-$_SERVER['PHP_SELF']        = $_SERVER['REQUEST_URI'] = '/';
+$_SERVER['PHP_SELF']        = $_SERVER['REQUEST_URI'] = '/index.php';
 $_SERVER['SCRIPT_NAME']     = '/' . basename($_SERVER['SCRIPT_NAME']);
 $_SERVER['HTTP_USER_AGENT'] = 'console';
 
 // Starting directory
-$cwd = getcwd();
+$cwd = realpath(getcwd());
 
 // toggle verbose mode
 $_verbose_mode = isset($args['v']) || isset($args['verbose']) ? TRUE : FALSE;
@@ -162,11 +162,15 @@ if (isset($args['s']) || isset($args['site'])) {
   $site = isset($args['s']) ? $args['s'] : $args['site'];
   if (file_exists('./sites/' . $site)) {
     $_SERVER['HTTP_HOST'] = $site;
-    $_SERVER['PHP_SELF'] = $_SERVER['REQUEST_URI'] = '/index.php';
   }
   else {
     echo "ERROR: Unable to locate site {$site}\n";
     exit(1);
+  }
+}
+else if (preg_match('/' . preg_quote($path . '/sites/', '/') . '(.*?)\//i', $cwd, $matches)) {
+  if ($matches[1] != 'all' && file_exists('./sites/' . $matches[1])) {
+    $_SERVER['HTTP_HOST'] = $matches[1];
   }
 }
 
