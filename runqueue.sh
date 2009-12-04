@@ -172,12 +172,6 @@ if (isset($args['s']) || isset($args['site'])) {
 
 define('DRUPAL_ROOT', realpath(getcwd()));
 
-// Some unavoidable errors happen because the database is not yet up-to-date.
-// Our custom error handler is not yet installed, so we just suppress them.
-ini_set('display_errors', TRUE);
-
-// We prepare a minimal bootstrap for the update requirements check to avoid
-// reaching the PHP memory limit.
 include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
