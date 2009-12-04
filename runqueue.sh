@@ -127,6 +127,9 @@ $_SERVER['PHP_SELF']        = $_SERVER['REQUEST_URI'] = '/';
 $_SERVER['SCRIPT_NAME']     = '/' . basename($_SERVER['SCRIPT_NAME']);
 $_SERVER['HTTP_USER_AGENT'] = 'console';
 
+// Starting directory
+$cwd = getcwd();
+
 // toggle verbose mode
 $_verbose_mode = isset($args['v']) || isset($args['verbose']) ? TRUE : FALSE;
 
@@ -141,6 +144,18 @@ if (isset($args['r']) || isset($args['root'])) {
     echo "\nERROR: {$path} not found.\n\n";
     exit(1);
   }
+}
+else {
+  $path = $cwd;
+  while ($path && !(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
+    $path = dirname($path);
+  }
+  
+  if (!(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
+    echo "Unable to locate Drupal root, user -r option to specify path to Drupal root\n";
+    exit(1);
+  }
+  chdir($path);
 }
 
 if (isset($args['s']) || isset($args['site'])) {
