@@ -12,7 +12,7 @@
 function beanstalkd_menu() {
   $items = array();
   
-  $items['admin/structure/beanstalkd'] = array(
+  $items['admin/build/beanstalkd'] = array(
     'title' => 'Beanstalkd',
     'description' => 'Configuration settings Beanstalk integration for Queues',
     'access arguments' => array('access administration'),

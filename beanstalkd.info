@@ -1,9 +1,8 @@
 ; $Id$
-name = Beanstalk
+name = Beanstalkd
 description = Client for using the beanstalkd queue system to manage selected drupal queues
-core = 7.x
+core = 6.x
 php = 5.2
 
-files[] = beanstalkd.module
-files[] = beanstalkd.admin.inc
-files[] = beanstalkd.queue.inc
+dependencies[] = drupal_queue
+
