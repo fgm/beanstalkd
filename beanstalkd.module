@@ -23,3 +23,10 @@ function beanstalkd_menu() {
   
   return $items;
 }
+
+/**
+ * Implementation of hook_drupal_queue_load_classes().
+ */
+function beanstalkd_drupal_queue_load_classes() {
+  module_load_include('inc', 'beanstalkd', 'beanstalkd.queue');
+}
