@@ -78,8 +78,12 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    *   An integer estimate of the number of items in the queue.
    */
   public function numberOfItems() {
-    $stats = $this->beanstalkd_queue->statsTube($this->_tubeName($this->tube));
-    
+    if ($this->tube) {
+      $stats = $this->beanstalkd_queue->statsTube($this->_tubeName($this->tube));
+    }
+    else {
+      $stats = $this->beanstalkd_queue->stats();
+    }
     return $stats['current-jobs-ready'];
   }
 
