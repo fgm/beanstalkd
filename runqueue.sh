@@ -46,7 +46,33 @@ function beanstalkd_process() {
       
         try {
           beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
-          $function($item->data);
+          
+          if (function_exists('pcntl_fork')) {
+            
+            $pid = pcntl_fork();
+            if ($pid == -1) {
+              beanstalkd_log(t('Problem forking process'));
+              ini_set('display_errors', 0);
+              $function($item->data);
+              ini_set('display_errors', 1);
+            }
+            else if ($pid) {
+              beanstalkd_log(t('Forking Job, waiting on child to complete...'), FALSE);
+              pcntl_wait($status);
+              beanstalkd_log(t('Done'));
+            }
+            else {
+              ini_set('display_errors', 0);
+              $function($item->data);
+              ini_set('display_errors', 1);
+              exit();
+            }
+          }
+          else {
+            ini_set('display_errors', 0);
+            $function($item->data);
+            ini_set('display_errors', 1);
+          }
       
           beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
           $queue->deleteItem($item);
@@ -61,7 +87,6 @@ function beanstalkd_process() {
     }
 
     drupal_get_messages(); // Clear out the messages so they don't take up memory
-    drupal_static_reset();
   }
 }
 
@@ -175,8 +200,10 @@ else if (preg_match('/' . preg_quote($path . '/sites/', '/') . '(.*?)\//i', $cwd
 
 define('DRUPAL_ROOT', realpath(getcwd()));
 
+ini_set('display_errors', 0);
 include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+ini_set('display_errors', 1);
 
 // turn off the output buffering that drupal is doing by default.
 ob_end_flush();
@@ -192,6 +219,8 @@ if (isset($args['l']) || isset($args['list'])) {
   }
   exit();
 }
+
+drupal_queue_include();
 
 // Make sure all the tubes are created
 foreach ($names as $name) {
