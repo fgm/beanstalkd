@@ -40,7 +40,7 @@ function beanstalkd_admin_settings() {
       '#type' => 'checkbox',
       '#title' => $queue,
       '#return_value' => 'Beanstalkd',
-      '#default_value' => variable_get($name, 'System'),
+      '#default_value' => variable_get($name, 'System') == 'System' ? NULL : variable_get($name, 'System'),
     );
   }
   
@@ -54,8 +54,7 @@ function beanstalkd_admin_settings_submit($form, &$form_state) {
   
   foreach ($queues as $name) {
     if (!$form_state['values'][$name]) {
-      unset($form_state['values'][$name]);
-      variable_del($name);
+      $form_state['values'][$name] = variable_get($name, 'System');
     }
   }
 } 
