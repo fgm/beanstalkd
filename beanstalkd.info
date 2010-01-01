@@ -2,7 +2,8 @@ name = Beanstalk
 description = Client for using the beanstalkd queue system to manage selected drupal queues
 core = 7.x
 php = 5.2
-
 files[] = beanstalkd.module
+files[] = beanstalkd.install
 files[] = beanstalkd.admin.inc
 files[] = beanstalkd.queue.inc
+
