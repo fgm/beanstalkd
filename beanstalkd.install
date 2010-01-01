@@ -13,16 +13,18 @@ function beanstalkd_requirements($phase) {
   $t = get_t();
   $requirements = array();
   
-  drupal_queue_include();
+  if ($phase == 'runtime') {
+    drupal_queue_include();
   
-  $queue = new BeanstalkdQueue(NULL);
+    $queue = new BeanstalkdQueue(NULL);
   
-  $requirements['beanstalkd_queue_count'] = array(
-    'title' => $t('Beanstalkd queue count'),
-    'value' => $queue->numberOfItems(),
-    'severity' => REQUIREMENT_INFO,
-    'description' => $t('Provides a count of all the number of items that are currently ready to be processed on the queue'),
-  );
+    $requirements['beanstalkd_queue_count'] = array(
+      'title' => $t('Beanstalkd queue count'),
+      'value' => $queue->numberOfItems(),
+      'severity' => REQUIREMENT_INFO,
+      'description' => $t('Provides a count of all the number of items that are currently ready to be processed on the queue'),
+    );
+  }
   
   return $requirements;
 }

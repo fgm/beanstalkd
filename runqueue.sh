@@ -25,8 +25,8 @@ function beanstalkd_log($string, $noeol = FALSE) {
   if (!$_verbose_mode) {
     return;
   }
-  
-  echo $string . ($noeol ? '' : "\n");
+
+  echo format_date(time(), 'custom', 'd M Y H:i:s') . "\t" . $string . ($noeol ? '' : "\n");
 }
 
 function beanstalkd_process() {
@@ -39,48 +39,9 @@ function beanstalkd_process() {
       $item = $queue->claimItemBlocking();
     }
     if ($item) {
-      $queues = beanstalkd_get_queues();
-
-      if (isset($queues[$item->name])) {
-        $info = $queues[$item->name];
-        $function = $info['worker callback'];
-      
-        try {
-          beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
-          
-          if (function_exists('pcntl_fork')) {
-            
-            $pid = pcntl_fork();
-            if ($pid == -1) {
-              beanstalkd_log(t('Problem forking process'));
-              ini_set('display_errors', 0);
-              $function($item->data);
-              ini_set('display_errors', 1);
-            }
-            else if ($pid) {
-              beanstalkd_log(t('Forking Job, waiting on child to complete...'), FALSE);
-              pcntl_wait($status);
-              beanstalkd_log(t('Done'));
-            }
-            else {
-              ini_set('display_errors', 0);
-              $function($item->data);
-              ini_set('display_errors', 1);
-              exit();
-            }
-          }
-          else {
-            ini_set('display_errors', 0);
-            $function($item->data);
-            ini_set('display_errors', 1);
-          }
-      
-          beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
-          $queue->deleteItem($item);
-        }
-        catch (Exception $e) {
-          beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
-        }
+      if (beanstalkd_execute($item)) {
+        beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
+        $queue->deleteItem($item);
       }
     }
     else {
@@ -91,13 +52,60 @@ function beanstalkd_process() {
   }
 }
 
+function beanstalkd_process_item($item) {
+  global $queue;
+  
+  $queues = beanstalkd_get_queues();
+
+  if (isset($queues[$item->name])) {
+    $info = $queues[$item->name];
+    $function = $info['worker callback'];
+
+    try {
+      beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
+    
+      //ini_set('display_errors', 0);
+      $function($item->data);
+      //ini_set('display_errors', 1);
+
+      return TRUE;
+    }
+    catch (Exception $e) {
+      beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
+    }
+  }
+}
+
+function beanstalkd_execute($item) {
+  global $args, $script_name, $php_exec, $_verbose_mode;
+  
+  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
+  
+  if ($_verbose_mode) {
+    $cmd .= ' -v';
+  }
+  
+  beanstalkd_log('Executing: ' . $cmd);
+  passthru($cmd, $retval);
+  
+  beanstalkd_log('Return Val: ' . $retval);
+
+  return $retval == 0;
+}
+
+function beanstalkd_shutdown() {
+  beanstalkd_log('Shutdown complete.');
+}
+
 /**
  * Drupal shell execution script
  */
 
 $script = basename(array_shift($_SERVER['argv']));
+$script_name = realpath($script);
+$php_exec = realpath($_ENV['_']);
 
-$shortopts = 'hr:s:vl';
+$shortopts = 'hr:s:vlx:';
 $longopts = array('help', 'root:', 'site:', 'verbose', 'list');
 
 $args = @getopt($shortopts, $longopts);
@@ -230,14 +238,21 @@ foreach ($names as $name) {
 
 $queue = new BeanstalkdQueue(NULL);
 
-/* foreach ($args as $arg => $option) {
-  switch ($arg) {
-    
-  }
-} */
-
 if (empty($names)) {
   echo "Exiting: No queues available.\n";
+  exit(1);
+}
+
+if (isset($args['x'])) {
+  beanstalkd_log('Collecting job ' . $args['x']);
+  $item = $queue->peekItem($args['x']);
+  if ($item) {
+    if (beanstalkd_process_item($item)) {
+      beanstalkd_log('Item processing complete.');
+      register_shutdown_function('beanstalkd_shutdown');
+      exit(0);
+    }
+  }
   exit(1);
 }
 

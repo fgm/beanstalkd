@@ -193,6 +193,27 @@ class BeanstalkdQueue implements DrupalQueueInterface {
     }
   }
   
+  /**
+   * Get a job from the Queue
+   */
+  public function peekItem($job_id) {
+    $job = $this->beanstalkd_queue->peek($job_id);
+    
+    if ($job) {
+      $item = unserialize($job->getData());
+      $item->id = $job->getId();
+      $item->beanstalkd_job = $job;
+      
+      if (isset($this->tube) && $this->tube != $item->name) {
+        return FALSE;
+      }
+      
+      return $item;
+    }
+    
+    return FALSE;
+  }
+  
   private function _tubeName($name) {
     return str_replace('_', '-', $name);
   }

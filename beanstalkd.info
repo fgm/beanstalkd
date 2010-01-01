@@ -5,4 +5,3 @@ core = 6.x
 php = 5.2
 
 dependencies[] = drupal_queue
-
