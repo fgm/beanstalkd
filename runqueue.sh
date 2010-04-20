@@ -48,6 +48,7 @@ function beanstalkd_process() {
     }
 
     drupal_get_messages(); // Clear out the messages so they don't take up memory
+    drupal_static_reset(NULL);
   }
 }
 
@@ -63,9 +64,9 @@ function beanstalkd_process_item($item) {
     try {
       beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
     
-      //ini_set('display_errors', 0);
+      ini_set('display_errors', 0);
       $function($item->data);
-      //ini_set('display_errors', 1);
+      ini_set('display_errors', 1);
 
       return TRUE;
     }
