@@ -125,10 +125,12 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    *   and either the queue is empty or there is some other non-recoverable
    *   problem.
    */
-  public function claimItem($lease_time = 3600, $timeout = 0) {
+  public function claimItem($lease_time = 3600, $timeout = TRUE) {
     if (!$this->beanstalkd_queue) {
       return FALSE;
     }
+
+    $timeout = ($timeout === TRUE) ? $this->beanstalkd_params['reserve_timeout'] : $timeout;
 
     $job = $this->beanstalkd_queue->reserve($timeout);
     if ($job) {
