@@ -90,6 +90,7 @@ function beanstalkd_get_queue_options($name) {
       'host' => variable_get('beanstalkd_host', 'localhost'),
       'port' => variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT),
       'fork' => FALSE,
+      'reserve_timeout' => 0
     );
   }
 
