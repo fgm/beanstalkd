@@ -51,12 +51,12 @@ All arguments are long options.
               Drupal installation, f.e. /home/www/foo/drupal (assuming Drupal
               running on Unix). Current directory is not required.
               Use surrounding quotation marks on Windows.
-  
+
   -s, --site  Used to specify with site will be used for the upgrade. If no
               site is selected then default will be used.
 
   -l, --list  List available beanstalkd queues
-  
+
   -v, --verbose This option displays the options as they are set, but will
               produce errors from setting the session.
 
@@ -64,6 +64,5 @@ To run this script without --root argument invoke it from the root directory
 of your Drupal installation with
 
   ./runqueue.sh
-
 
 Running this will process any messages on any Beanstalkd queue.

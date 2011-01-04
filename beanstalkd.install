@@ -12,19 +12,50 @@
 function beanstalkd_requirements($phase) {
   $t = get_t();
   $requirements = array();
-  
+
   if ($phase == 'runtime') {
     drupal_queue_include();
-  
-    $queue = new BeanstalkdQueue(NULL);
-  
-    $requirements['beanstalkd_queue_count'] = array(
-      'title' => $t('Beanstalkd queue count'),
-      'value' => $queue->numberOfItems(),
-      'severity' => REQUIREMENT_INFO,
-      'description' => $t('Provides a count of all the number of items that are currently ready to be processed on the queue'),
+
+    $path = beanstalkd_pheanstalk_get_path();
+    if (!$path) {
+      $config = conf_path();
+      $profile = variable_get('install_profile', 'default');
+      $searchdir = array(
+        "profile/$profile/libraries",
+        'sites/all/libraries',
+        "$config/libraries",
+      );
+    }
+    else {
+      $searchdir = array();
+    }
+    $requirements['beanstalkd_pheanstalk_path'] = array(
+      'title' => $t('Beanstalkd Pheanstalk path'),
+      'value' => $path ? $path : $t('Not found. Please ensure that Phpeanstalk is installed in one of the following paths; !paths', array('!paths' => '"' . implode('/pheanstalk", "', $searchdir) . '/pheanstalk"')),
+      'severity' => $path ? REQUIREMENT_INFO : REQUIREMENT_ERROR,
+      'description' => $t('Pheanstalk is a pure PHP 5.2+ client for the <a href="http://xph.us/software/beanstalkd/">beanstalkd workqueue</a> and provides the connection class to allow Drupal to talk to the beanstalkd daemon. See <a href="https://github.com/pda/pheanstalk">https://github.com/pda/pheanstalk</a> for more information about Pheanstalk.'),
     );
+
+    if (class_exists('BeanstalkdQueue')) {
+      $queue = new BeanstalkdQueue(NULL);
+
+      $requirements['beanstalkd_queue_count'] = array(
+        'title' => $t('Beanstalkd Queue count'),
+        'value' => $queue->numberOfItems(),
+        'severity' => REQUIREMENT_INFO,
+        'description' => $t('Provides a count of all the number of items that are currently ready to be processed on the queue'),
+      );
+
+      if ($e = $queue->getError()) {
+        $requirements['beanstalkd_last_error'] = array(
+          'title' => $t('Beanstalkd Queue count error'),
+          'value' => $t('%message in %file on line %line.', array('%error' => $e->getCode(), '%message' => $e->getMessage(), '%file' => $e->getFile(), '%line' => $e->getLine())),
+          'severity' => REQUIREMENT_ERROR,
+          'description' => $t('An error has occurred while getting the current number of in the queue.'),
+        );
+      }
+    }
   }
-  
+
   return $requirements;
 }

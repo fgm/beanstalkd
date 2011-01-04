@@ -7,20 +7,20 @@
 function beanstalkd_get_queues() {
   $queues = module_invoke_all('cron_queue_info');
   drupal_alter('cron_queue_info', $queues);
-  
+
   foreach ($queues as $queue => $settings) {
     $name = 'queue_module_' . $queue;
     if (variable_get($name, 'System') != 'Beanstalkd') {
       unset($queues[$queue]);
     }
   }
-  
+
   return $queues;
 }
 
 function beanstalkd_log($string, $noeol = FALSE) {
   global $_verbose_mode;
-  
+
   if (!$_verbose_mode) {
     return;
   }
@@ -30,7 +30,7 @@ function beanstalkd_log($string, $noeol = FALSE) {
 
 function beanstalkd_process() {
   global $queue;
-  
+
   while (1) {
     $item = $queue->claimItem();
     if (!$item) {
@@ -54,7 +54,7 @@ function beanstalkd_process() {
 
 function beanstalkd_process_item($item) {
   global $queue;
-  
+
   $queues = beanstalkd_get_queues();
 
   if (isset($queues[$item->name])) {
@@ -63,7 +63,7 @@ function beanstalkd_process_item($item) {
 
     try {
       beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
-    
+
       ini_set('display_errors', 0);
       $function($item->data);
       ini_set('display_errors', 1);
@@ -78,16 +78,16 @@ function beanstalkd_process_item($item) {
 
 function beanstalkd_execute($item) {
   global $args, $script_name, $php_exec, $_verbose_mode;
-  
+
   $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
-  
+
   if ($_verbose_mode) {
     $cmd .= ' -v';
   }
-  
+
   beanstalkd_log('Executing: ' . $cmd);
   passthru($cmd, $retval);
-  
+
   beanstalkd_log('Return Val: ' . $retval);
 
   return $retval == 0;
@@ -127,12 +127,12 @@ All arguments are long options.
               Drupal installation, f.e. /home/www/foo/drupal (assuming Drupal
               running on Unix). Current directory is not required.
               Use surrounding quotation marks on Windows.
-  
+
   -s, --site  Used to specify with site will be used for the upgrade. If no
               site is selected then default will be used.
 
   -l, --list  List available beanstalkd queues
-  
+
   -v, --verbose This option displays the options as they are set, but will
               produce errors from setting the session.
 
@@ -183,7 +183,7 @@ else {
   while ($path && !(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
     $path = dirname($path);
   }
-  
+
   if (!(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
     echo "Unable to locate Drupal root, user -r option to specify path to Drupal root\n";
     exit(1);
