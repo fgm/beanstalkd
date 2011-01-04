@@ -5,7 +5,7 @@
  * @file
  */
 
-class BeanstalkdQueue implements DrupalQueueInterface {
+class BeanstalkdQueue implements DrupalReliableQueueInterface {
   /**
    * 
    */
@@ -14,7 +14,7 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    * The pheanstalk object which connects to the beanstalkd server.
    */
   protected $beanstalkd_queue;
-  
+
   /**
    * Start working with a queue.
    *
@@ -23,26 +23,39 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    */
   public function __construct($name) {
     $this->tube = $name;
-    if (file_exists(drupal_get_path('module', 'beanstalkd') . '/pheanstalk/classes/Pheanstalk/ClassLoader.php')) {
-      module_load_include('php', 'beanstalkd', 'pheanstalk/classes/Pheanstalk/ClassLoader');
-      Pheanstalk_ClassLoader::register(drupal_get_path('module', 'beanstalkd') . '/pheanstalk/classes');
-      
-      $this->beanstalkd_queue = new Pheanstalk(variable_get('beanstalkd_host', 'localhost'), variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT));
-      if ($name) {
-        // If a queue name  is past then set this tube to be used and set it to be the 
-        // only tube to be watched.
-        $tube = $this->_tubeName($name);
-        $this->beanstalkd_queue
-          ->useTube($tube)
-          ->watch($tube)
-          ->ignore('default');
+    if (beanstalkd_load_pheanstalk()) {
+      $this->beanstalkd_params = beanstalkd_get_queue_options($name);
+
+      try {
+        $this->beanstalkd_queue = new Pheanstalk($this->beanstalkd_params['host'], $this->beanstalkd_params['port']);
+        if ($name) {
+          // If a queue name  is past then set this tube to be used and set it to be the 
+          // only tube to be watched.
+          $tube = $this->_tubeName($name);
+          $this->beanstalkd_queue
+            ->useTube($tube)
+            ->watch($tube)
+            ->ignore('default');
+        }
+        else {
+          // be sure to establish the connection so that we can catch any 
+          // errors
+          $this->beanstalkd_queue
+            ->stats();
+        }
+      }
+      catch (Exception $e) {
+        $this->beanstalkd_queue = FALSE;
+        $this->lastError = $e;
+        watchdog('beanstalk', '%message in %file on line %line.', array('%error' => $e->getCode(), '%message' => $e->getMessage(), '%file' => $e->getFile(), '%line' => $e->getLine()), WATCHDOG_ERROR);
       }
     }
     else {
+      $this->beanstalkd_params = array();
       $this->beanstalkd_queue = FALSE;
     }
   }
-  
+
   /**
    * Add a queue item and store it directly to the queue.
    *
@@ -55,11 +68,15 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    *   far as we know, the item is now in the queue.
    */
   public function createItem($data) {
+    if (!$this->beanstalkd_queue) {
+      return FALSE;
+    }
+
     $record = new stdClass();
     $record->name = $this->tube;
     $record->data = $data;
     $record = serialize($record);
-    
+
     return $this->beanstalkd_queue->put($record) ? TRUE : FALSE;
   }
 
@@ -78,6 +95,10 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    *   An integer estimate of the number of items in the queue.
    */
   public function numberOfItems() {
+    if (!$this->beanstalkd_queue) {
+      return;
+    }
+
     if ($this->tube) {
       $stats = $this->beanstalkd_queue->statsTube($this->_tubeName($this->tube));
     }
@@ -105,23 +126,12 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    *   and either the queue is empty or there is some other non-recoverable
    *   problem.
    */
-  public function claimItem($lease_time = 3600) {
-    $job = $this->beanstalkd_queue->reserve(0);
-    if ($job) {
-      $item = unserialize($job->getData());
-      $item->id = $job->getId();
-      $item->beanstalkd_job = $job;
-      return $item;
+  public function claimItem($lease_time = 3600, $timeout = 0) {
+    if (!$this->beanstalkd_queue) {
+      return FALSE;
     }
-    return FALSE;
-  }
-  
-  /**
-   * Claim the next item on any of the tubes which are being watched. Since this is a blocking
-   * method it will not return until and item is claimed.
-   */
-  public function claimItemBlocking() {
-    $job = $this->beanstalkd_queue->reserve();
+
+    $job = $this->beanstalkd_queue->reserve($timeout);
     if ($job) {
       $item = unserialize($job->getData());
       $item->id = $job->getId();
@@ -132,12 +142,26 @@ class BeanstalkdQueue implements DrupalQueueInterface {
   }
 
   /**
+   * Claim the next item on any of the tubes which are being watched. Since this is a blocking
+   * method it will not return until and item is claimed.
+   *
+   * This method has been depreciated. Use $this->claimItem(3600, NULL)
+   */
+  public function claimItemBlocking() {
+    return $this->claimItem(3600, NULL);
+  }
+
+  /**
    * Delete a finished item from the queue.
    *
    * @param $item
    *   The item returned by DrupalQueueInterface::claimItem().
    */
   public function deleteItem($item) {
+    if (!$this->beanstalkd_queue) {
+      return;
+    }
+
     $this->beanstalkd_queue->delete($item->beanstalkd_job);
   }
 
@@ -153,67 +177,99 @@ class BeanstalkdQueue implements DrupalQueueInterface {
    * depends on the queue implementation if this is necessary at all).
    */
   public function createQueue() {
-    
+
   }
 
   /**
-   * Delete a queue and every item in the queue.
+   * Delete a finished item from the queue.
+   *
+   * @param $item
+   *   The item returned by DrupalQueueInterface::claimItem().
    */
   public function deleteQueue() {
-    
+
   }
-  
+
+  /**
+   * Release an item that the worker could not process, so another
+   * worker can come in and process it before the timeout expires.
+   *
+   * @param $item
+   * @return boolean
+   */
+  public function releaseItem($item) {
+
+  }
+
   /**
    * watch message queue
    */
   public function watch($names) {
+    if (!$this->beanstalkd_queue) {
+      return;
+    }
+
     $names = is_string($names) ? array($names) : $names;
     $names = array_map(array($this, '_tubeName'), $names);
-    
+
     $tubes = $this->beanstalkd_queue->listTubes();
     $names = array_intersect($tubes, $names);
-    
+
     foreach ($names as $name) {
       $this->beanstalkd_queue->watch($name);
     }
   }
-  
+
   /**
    * Queues to ignore
    */
   public function ignore($names) {
+    if (!$this->beanstalkd_queue) {
+      return;
+    }
+
     $names = is_string($names) ? array($names) : $names;
     $names = array_map(array($this, '_tubeName'), $names);
-    
+
     $tubes = $this->beanstalkd_queue->listTubes();
     $names = array_intersect($tubes, $names);
-    
+
     foreach ($names as $name) {
       $this->beanstalkd_queue->ignore($name);
     }
   }
-  
+
   /**
    * Get a job from the Queue
    */
   public function peekItem($job_id) {
+    if (!$this->beanstalkd_queue) {
+      return;
+    }
+
     $job = $this->beanstalkd_queue->peek($job_id);
-    
+
     if ($job) {
       $item = unserialize($job->getData());
       $item->id = $job->getId();
       $item->beanstalkd_job = $job;
-      
+
       if (isset($this->tube) && $this->tube != $item->name) {
         return FALSE;
       }
-      
+
       return $item;
     }
-    
+
     return FALSE;
   }
-  
+
+  public function getError() {
+    if (isset($this->lastError)) {
+      return $this->lastError;
+    }
+  }
+
   private function _tubeName($name) {
     return str_replace('_', '-', $name);
   }
