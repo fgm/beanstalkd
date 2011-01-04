@@ -197,7 +197,11 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    * @return boolean
    */
   public function releaseItem($item) {
-
+    if (!$this->beanstalkd_queue) {
+      return FALSE;
+    }
+    
+    return $this->beanstalkd_queue->release($item->beanstalkd_job) ? TRUE: FALSE;
   }
 
   /**
