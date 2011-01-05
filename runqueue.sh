@@ -2,6 +2,28 @@
 <?php
 // $Id$
 
+
+/**
+ *
+ */
+function beanstalkd_get_php() {
+  static $php_exec;
+  
+  if (!isset($php_exec)) {
+    if (isset($_ENV['_'])) {
+      $php_exec = realpath($_ENV['_']);
+    }
+    else {
+      exec('which php', $output, $retval);
+      if (!$retval) {
+        $php_exec = $output;
+      }
+    }
+  }
+  
+  return $php_exec;
+}
+
 /**
  * beanstalkd_get_queues().
  */
@@ -11,7 +33,14 @@ function beanstalkd_get_queues() {
 
   foreach ($queues as $queue => $settings) {
     $name = 'queue_module_' . $queue;
+    $options = beanstalkd_get_queue_options($queue);
     if (variable_get($name, 'System') != 'Beanstalkd') {
+      unset($queues[$queue]);
+    }
+    elseif (variable_get('beanstalkd_host', 'localhost') != $options['host']) {
+      unset($queues[$queue]);
+    }
+    elseif (variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT) != $options['port']) {
       unset($queues[$queue]);
     }
   }
@@ -33,13 +62,16 @@ function beanstalkd_process() {
   global $queue;
 
   while (1) {
-    $item = $queue->claimItem();
+    $item = $queue->claimItem(3600, 0);
     if (!$item) {
       beanstalkd_log(t("Waiting for next item to be claimed"));
-      $item = $queue->claimItemBlocking();
+      $item = $queue->claimItem(3600, NULL);
     }
     if ($item) {
-      if (beanstalkd_execute($item)) {
+      $queue_defaults = beanstalkd_get_queue_options($item->name);
+      $process_function = $queue_defaults['fork'] ? 'beanstalkd_execute' : 'beanstalkd_process_item';
+      
+      if ($process_function($item)) {
         beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
         $queue->deleteItem($item);
       }
@@ -75,14 +107,16 @@ function beanstalkd_process_item($item) {
     }
     catch (Exception $e) {
       beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
+      $queue->releaseItem($item);
+      return FALSE;
     }
   }
 }
 
 function beanstalkd_execute($item) {
-  global $args, $script_name, $php_exec, $_verbose_mode;
+  global $args, $script_name, $_verbose_mode;
 
-  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
+  $cmd = beanstalkd_get_php() . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
 
   if ($_verbose_mode) {
     $cmd .= ' -v';
@@ -106,10 +140,9 @@ function beanstalkd_shutdown() {
 
 $script = basename(array_shift($_SERVER['argv']));
 $script_name = realpath($script);
-$php_exec = realpath($_ENV['_']);
 
-$shortopts = 'hr:s:vlx:';
-$longopts = array('help', 'root:', 'site:', 'verbose', 'list');
+$shortopts = 'hr:s:vlx:c:p:';
+$longopts = array('help', 'root:', 'site:', 'verbose', 'list', 'host:', 'port:');
 
 $args = @getopt($shortopts, $longopts);
 
@@ -135,6 +168,10 @@ All arguments are long options.
               site is selected then default will be used.
 
   -l, --list  List available beanstalkd queues
+
+  -c, --host  Specify host of the beanstalkd server.
+
+  -p, --port  Specify port of the beanstalkd server.
 
   -v, --verbose This option displays the options as they are set, but will
               produce errors from setting the session.
@@ -220,6 +257,17 @@ ini_set('display_errors', 1);
 // turn off the output buffering that drupal is doing by default.
 ob_end_flush();
 
+beanstalkd_load_pheanstalk();
+drupal_queue_include();
+
+if (isset($args['c']) || isset($args['host'])) {
+  $conf['beanstalkd_host'] = isset($args['c']) ? $args['c'] : $args['host'];
+}
+
+if (isset($args['p']) || isset($args['port'])) {
+  $conf['beanstalkd_port'] = isset($args['p']) ? $args['p'] : $args['port'];
+}
+
 $names = array_keys(beanstalkd_get_queues());
 
 if (isset($args['l']) || isset($args['list'])) {
@@ -232,9 +280,8 @@ if (isset($args['l']) || isset($args['list'])) {
   exit();
 }
 
-drupal_queue_include();
-
 // Make sure all the tubes are created
+// Note: With Beanstalkd this doesn't do anything, as queues are created dynamically.
 foreach ($names as $name) {
   DrupalQueue::get($name)->createQueue();
 }
