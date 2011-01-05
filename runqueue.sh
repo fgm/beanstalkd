@@ -13,6 +13,9 @@ function beanstalkd_get_php() {
     if (isset($_ENV['_'])) {
       $php_exec = realpath($_ENV['_']);
     }
+    elseif (isset($_SERVER['_'])) {
+      $php_exec = $_SERVER['_'];
+    }
     else {
       exec('which php', $output, $retval);
       if (!$retval) {
@@ -116,7 +119,9 @@ function beanstalkd_process_item($item) {
 function beanstalkd_execute($item) {
   global $args, $script_name, $_verbose_mode;
 
-  $cmd = beanstalkd_get_php() . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
+  $php_exec = beanstalkd_get_php();
+
+  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
 
   if ($_verbose_mode) {
     $cmd .= ' -v';
