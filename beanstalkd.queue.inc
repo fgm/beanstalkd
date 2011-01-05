@@ -218,7 +218,6 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     $names = array_map(array($this, '_tubeName'), $names);
 
     $tubes = $this->beanstalkd_queue->listTubes();
-    $names = array_intersect($tubes, $names);
 
     foreach ($names as $name) {
       $this->beanstalkd_queue->watch($name);
