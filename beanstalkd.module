@@ -54,6 +54,8 @@ function beanstalkd_pheanstalk_get_path() {
   if (file_exists("$config/libraries")) {
     $searchdir[] = "$config/libraries";
   }
+  
+  $searchdir[] = drupal_get_path('module', 'beanstalkd');
 
   foreach ($searchdir as $dir) {
     if (file_exists("$dir/pheanstalk/classes/Pheanstalk/ClassLoader.php")) {
