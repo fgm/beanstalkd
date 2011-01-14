@@ -11,7 +11,13 @@ Requirements
 ------------
 
 * beanstalkd needs to be installed and configured.
-* a copy of pheanstalk needs to be checked out and put inside the beanstalkd module directory. Use the following command in the beanstalkd module directory
+* a copy of pheanstalk needs to be checked out and put inside one of the following directories. 
+
+1. profile/{profile}/libraries
+2. sites/all/libraries
+3. sites/{config}/libraries
+
+Use the following command in the beanstalkd module directory
 
 $ git clone git://github.com/pda/pheanstalk.git
 
