@@ -275,6 +275,6 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   }
 
   private function _tubeName($name) {
-    return str_replace('_', '-', $name);
+    return variable_get('beanstalkd_prefix', '') . $name;
   }
 }
