@@ -25,8 +25,24 @@ Installation
 ------------
 
 1. Install like a normal Drupal module.
-2. Configure on Administer > Structure > Beanstalkd the link to the host and the port for beanstalkd.
-3. Check the queues that will use beanstalkd for the queue manager.
+2. In your settings.php you need to set the $conf variables to the correct settings.
+
+If you want to set beanstalkd as the default queue manager then add the following to your settings.php
+
+$conf['queue_default_class'] = 'BeanstalkdQueue';
+
+Alternatively you can also set for each queue to use beanstalkd
+
+$conf['queue_class_{queue name}'] = 'BeanstalkdQueue';
+
+Lastly you can also set some beanstalkd defaults.
+
+$conf['beanstalk_queue_{queue name}'] = array(
+  'host' => 'host', // Name of the host where beanstalkd is installed.
+  'port' => '11300', // Port which beanstalkd is listening to.
+  'fork' => FALSE, // Used in runqueue.sh to know if it should run the job in another process.
+  'reserve_timeout' => 0, // How long you should wait when reserving a job.
+);
 
 Running
 -------
