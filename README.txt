@@ -41,6 +41,7 @@ $conf['beanstalk_queue_{queue name}'] = array(
   'port' => '11300', // Port which beanstalkd is listening to.
   'fork' => FALSE, // Used in runqueue.sh to know if it should run the job in another process.
   'reserve_timeout' => 0, // How long you should wait when reserving a job.
+  'priority' => 1024, // Sets the priority of the job
 );
 
 Overall queue defaults can be set like so.
@@ -50,6 +51,7 @@ $conf['beanstalk_default_queue'] = array(
   'port' => '11300', // Port which beanstalkd is listening to.
   'fork' => FALSE, // Used in runqueue.sh to know if it should run the job in another process.
   'reserve_timeout' => 0, // How long you should wait when reserving a job.
+  'priority' => 1024, // Sets the priority of the job
 );
 
 If any options are missed then they will be populated with the default options.
