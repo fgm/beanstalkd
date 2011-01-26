@@ -38,11 +38,22 @@ $conf['queue_class_{queue name}'] = 'BeanstalkdQueue';
 Lastly you can also set some beanstalkd defaults.
 
 $conf['beanstalk_queue_{queue name}'] = array(
-  'host' => 'host', // Name of the host where beanstalkd is installed.
+  'host' => 'localhost', // Name of the host where beanstalkd is installed.
   'port' => '11300', // Port which beanstalkd is listening to.
   'fork' => FALSE, // Used in runqueue.sh to know if it should run the job in another process.
   'reserve_timeout' => 0, // How long you should wait when reserving a job.
 );
+
+Overall queue defaults can be set like so.
+
+$conf['beanstalk_default_queue'] = array(
+  'host' => 'localhost', // Name of the host where beanstalkd is installed.
+  'port' => '11300', // Port which beanstalkd is listening to.
+  'fork' => FALSE, // Used in runqueue.sh to know if it should run the job in another process.
+  'reserve_timeout' => 0, // How long you should wait when reserving a job.
+);
+
+If any options are missed then they will be populated with the default options.
 
 Running
 -------
