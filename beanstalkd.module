@@ -62,12 +62,13 @@ function beanstalkd_get_queue_options($name) {
 
   if (!isset($options[$name])) {
     $options[$name] = variable_get('beanstalk_queue_' . $name, array());
-    $options[$name] += array(
+    $defaults = variable_get('beanstalk_default_queue', array()) + array(
       'host' => variable_get('beanstalkd_host', 'localhost'),
       'port' => variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT),
       'fork' => FALSE,
       'reserve_timeout' => 0
     );
+    $options[$name] += $defaults;
   }
 
   return $options[$name];
