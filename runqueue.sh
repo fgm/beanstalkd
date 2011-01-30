@@ -35,9 +35,9 @@ function beanstalkd_get_queues() {
   drupal_alter('cron_queue_info', $queues);
 
   foreach ($queues as $queue => $settings) {
-    $name = 'queue_module_' . $queue;
+    $name = 'queue_class_' . $queue;
     $options = beanstalkd_get_queue_options($queue);
-    if (variable_get($name, 'System') != 'Beanstalkd') {
+    if (variable_get($name, variable_get('queue_default_class', 'SystemQueue')) != 'BeanstalkdQueue') {
       unset($queues[$queue]);
     }
     elseif (variable_get('beanstalkd_host', 'localhost') != $options['host']) {
@@ -207,6 +207,7 @@ $_SERVER['HTTP_USER_AGENT'] = 'console';
 
 // Starting directory
 $cwd = realpath(getcwd());
+beanstalkd_get_php();
 
 // toggle verbose mode
 $_verbose_mode = isset($args['v']) || isset($args['verbose']) ? TRUE : FALSE;
@@ -236,9 +237,11 @@ else {
   chdir($path);
 }
 
+define('DRUPAL_ROOT', realpath(getcwd()));
+
 if (isset($args['s']) || isset($args['site'])) {
   $site = isset($args['s']) ? $args['s'] : $args['site'];
-  if (file_exists('./sites/' . $site)) {
+  if (file_exists(realpath(DRUPAL_ROOT . '/sites/' . $site))) {
     $_SERVER['HTTP_HOST'] = $site;
   }
   else {
@@ -247,12 +250,10 @@ if (isset($args['s']) || isset($args['site'])) {
   }
 }
 else if (preg_match('/' . preg_quote($path . '/sites/', '/') . '(.*?)\//i', $cwd, $matches)) {
-  if ($matches[1] != 'all' && file_exists('./sites/' . $matches[1])) {
+  if ($matches[1] != 'all' && file_exists(realpath(DRUPAL_ROOT . '/sites/' . $matches[1]))) {
     $_SERVER['HTTP_HOST'] = $matches[1];
   }
 }
-
-define('DRUPAL_ROOT', realpath(getcwd()));
 
 ini_set('display_errors', 0);
 include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
@@ -280,7 +281,7 @@ if (isset($args['l']) || isset($args['list'])) {
     echo (t("Available beanstalkd queues:\n\n@queues\n", array('@queues' => implode("\n", $names))));
   }
   else {
-    echo (t('No queues available'));
+    echo (t("No queues available\n"));
   }
   exit();
 }
