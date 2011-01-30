@@ -87,6 +87,7 @@ function beanstalkd_process() {
     if (function_exists('ctools_static_reset')) {
       ctools_static_reset(NULL);
     }
+    beanstalkd_log(t('Total Memory Used: @memory', array('@memory' => memory_get_usage())));
   }
 }
 
