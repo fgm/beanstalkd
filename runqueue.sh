@@ -61,18 +61,28 @@ function beanstalkd_log($string, $noeol = FALSE) {
   echo format_date(time(), 'custom', 'd M Y H:i:s') . "\t" . $string . ($noeol ? '' : "\n");
 }
 
-function beanstalkd_process() {
+function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $process_items = FALSE) {
   global $queue;
+  
+  $start_time = time();
+  $process_count = 0;
 
   while (1) {
     $item = $queue->claimItem(3600, 0);
     if (!$item) {
-      beanstalkd_log(t("Waiting for next item to be claimed"));
-      $item = $queue->claimItem(3600, NULL);
+      if ($process_time === FALSE && $process_items === FALSE) {
+        beanstalkd_log(t("Waiting for next item to be claimed"));
+        $item = $queue->claimItem(3600, NULL);
+      }
+      else {
+        // There are no more items, and as we have limits we just want to return.
+        return;
+      }
     }
     if ($item) {
+      $process_count++;
       $queue_defaults = beanstalkd_get_queue_options($item->name);
-      $process_function = $queue_defaults['fork'] ? 'beanstalkd_execute' : 'beanstalkd_process_item';
+      $process_function = ($allow_forking && $queue_defaults['fork']) ? 'beanstalkd_execute' : 'beanstalkd_process_item';
       
       if ($process_function($item)) {
         beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
@@ -80,7 +90,13 @@ function beanstalkd_process() {
       }
     }
     else {
-      sleep(5); // sleep for 5 seconds and try again.
+      if ($process_time === FALSE && $process_items === FALSE) {
+        sleep(5); // sleep for 5 seconds and try again.
+      }
+      else {
+        // There are no more items, and as we have limits we just want to return.
+        return;
+      }
     }
 
     drupal_get_messages(); // Clear out the messages so they don't take up memory
@@ -88,6 +104,16 @@ function beanstalkd_process() {
       ctools_static_reset(NULL);
     }
     beanstalkd_log(t('Total Memory Used: @memory', array('@memory' => memory_get_usage())));
+    
+    // Check to see if the limits have been exceeded and return.
+    if ($process_time && $start_time+$process_time < time()) {
+      beanstalkd_log(t('Processing time limit of @seconds seconds exceeded.', array('@seconds' => $process_time)));
+      return;
+    }
+    if ($process_items && $process_items < $process_count) {
+      beanstalkd_log(t('Processing limit of @items jobs exceeded.', array('@items' => $process_items)));
+      return;
+    }
   }
 }
 
@@ -305,6 +331,14 @@ if (isset($args['x'])) {
   $item = $queue->peekItem($args['x']);
   if ($item) {
     if (beanstalkd_process_item($item)) {
+      $options = beanstalkd_get_queue_options($item->name);
+      if ($options['forked_extra_timeout'] || $options['forked_extra_items']) {
+        $queue->watch($item->name);
+        $queue->ignore('default');
+        
+        beanstalkd_log(t('Processing additional items while forked on queue: @name', array('@name' => $item->name)));
+        beanstalkd_process(FALSE, $options['forked_extra_timeout'], $options['forked_extra_items']);
+      }
       beanstalkd_log('Item processing complete.');
       register_shutdown_function('beanstalkd_shutdown');
       exit(0);
