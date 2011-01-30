@@ -84,6 +84,7 @@ function beanstalkd_process() {
 
     drupal_get_messages(); // Clear out the messages so they don't take up memory
     drupal_static_reset(NULL);
+    beanstalkd_log(t('Total Memory Used: @memory', array('@memory' => memory_get_usage())));
   }
 }
 
