@@ -62,7 +62,7 @@ function beanstalkd_log($string, $noeol = FALSE) {
 }
 
 function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $process_items = FALSE) {
-  global $queue;
+  global $queue, $start_memory;
   
   $start_time = time();
   $process_count = 0;
@@ -103,7 +103,7 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
     if (function_exists('ctools_static_reset')) {
       ctools_static_reset(NULL);
     }
-    beanstalkd_log(t('Total Memory Used: @memory', array('@memory' => memory_get_usage())));
+    beanstalkd_log(t('Total Memory Used: @memory, @bootstrap since bootstrap', array('@memory' => format_size(memory_get_usage()), '@bootstrap' => format_size(memory_get_usage() - $start_memory))));
     
     // Check to see if the limits have been exceeded and return.
     if ($process_time && $start_time+$process_time < time()) {
@@ -128,6 +128,9 @@ function beanstalkd_process_item($item) {
 
     try {
       beanstalkd_log(t("Processing job @id for queue @name", array('@id' => $item->id, '@name' => $item->name)));
+      if (isset($info['description callback']) && function_exists($info['description callback'])) {
+        beanstalkd_log($info['description callback']($item->data));
+      }
 
       ini_set('display_errors', 0);
       $function($item->data);
@@ -289,6 +292,8 @@ ini_set('display_errors', 1);
 
 // turn off the output buffering that drupal is doing by default.
 ob_end_flush();
+
+$start_memory = memory_get_usage();
 
 beanstalkd_load_pheanstalk();
 drupal_queue_include();
