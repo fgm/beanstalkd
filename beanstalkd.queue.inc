@@ -65,7 +65,8 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     
     if (method_exists($this->beanstalkd_queue, $name)) {
       $tube_commands = array('watch', 'ignore', 'statsTube', 'pauseTube');
-      $job_commands = array('bury', 'delete', 'peek', 'release', 'statsJob', 'touch');
+      $job_commands = array('bury', 'delete', 'release', 'statsJob', 'touch');
+      $job_id_commands = array('peek');
       if (in_array($name, $tube_commands) && is_array($arguments[0])) {
         $ret = array();
         $tubes = $arguments[0];
@@ -81,9 +82,16 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       }
       elseif (in_array($name, $job_commands) && is_array($arguments[0])) {
         $ret = array();
-        $jobs = $arguments[0];
-        foreach ($jobs as $job) {
-          $arguments[0] = $job;
+        $items = $arguments[0];
+        foreach ($items as $item) {
+          $arguments[0] = $item->beanstalkd_job;
+          $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+        }
+      }
+      elseif (in_array($name, $job_id_commands) && is_array($arguments[0])) {
+        $ids = $arguments[0];
+        foreach ($ids as $id) {
+          $arguments[0] = $id;
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
