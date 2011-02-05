@@ -99,17 +99,15 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
             $item->id = $object->getId();
             $item->beanstalkd_job = $object;
             $ret[$id] = $item;
-            return $item;
           }
         }
       }
       else {
-        if (is_object($object) && is_a($object, 'Pheanstalk_Job')) {
-          $item = unserialize($object->getData());
-          $item->id = $object->getId();
-          $item->beanstalkd_job = $object;
-          $ret[$id] = $item;
-          return $item;
+        if (is_object($ret) && is_a($ret, 'Pheanstalk_Job')) {
+          $item = unserialize($ret->getData());
+          $item->id = $ret->getId();
+          $item->beanstalkd_job = $ret;
+          $ret = $item;
         }
       }
       return $ret;
