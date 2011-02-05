@@ -21,7 +21,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    * @param $name
    *   Arbitrary string. The name of the queue to work with.
    */
-  public function __construct($name) {
+  public function __construct($name, $force_connection = FALSE) {
     $this->tube = $name;
     if (beanstalkd_load_pheanstalk()) {
       $this->beanstalkd_params = beanstalkd_get_queue_options($name);
@@ -37,7 +37,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
             ->watch($tube)
             ->ignore('default');
         }
-        else {
+        elseif ($force_connection) {
           // be sure to establish the connection so that we can catch any 
           // errors
           $this->beanstalkd_queue
