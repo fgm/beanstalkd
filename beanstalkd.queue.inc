@@ -56,6 +56,69 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   }
 
   /**
+   * Use Method Overloading to allow unknown methods to be past to Pheanstalk object
+   */
+  function __call($name, $arguments) {
+    if (!$this->beanstalkd_queue) {
+      return FALSE;
+    }
+    
+    if (method_exists($this->beanstalkd_queue, $name)) {
+      $tube_commands = array('watch', 'ignore', 'statsTube', 'pauseTube');
+      $job_commands = array('bury', 'delete', 'peek', 'release', 'statsJob', 'touch');
+      if (in_array($name, $tube_commands) && is_array($arguments[0])) {
+        $ret = array();
+        $tubes = $arguments[0];
+        foreach ($tubes as $tube) {
+          $tube = $this->_tubeName($tube);
+          $arguments[0] = $tube;
+          $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+        }        
+      }
+      elseif (in_array($name, $tube_commands)) {
+        $arguments[0] = $this->_tubeName($arguments[0]);
+        $ret = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+      }
+      elseif (in_array($name, $job_commands) && is_array($arguments[0])) {
+        $ret = array();
+        $jobs = $arguments[0];
+        foreach ($jobs as $job) {
+          $arguments[0] = $job;
+          $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+        }
+      }
+      else {
+        $ret = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+      }
+      
+      if (is_array($ret)) {
+        foreach ($ret as $id => $object) {
+          if (is_object($object) && is_a($object, 'Pheanstalk_Job')) {
+            $item = unserialize($object->getData());
+            $item->id = $object->getId();
+            $item->beanstalkd_job = $object;
+            $ret[$id] = $item;
+            return $item;
+          }
+        }
+      }
+      else {
+        if (is_object($object) && is_a($object, 'Pheanstalk_Job')) {
+          $item = unserialize($object->getData());
+          $item->id = $object->getId();
+          $item->beanstalkd_job = $object;
+          $ret[$id] = $item;
+          return $item;
+        }
+      }
+      return $ret;
+    }
+    else {
+      throw new Exception(t('Method doesn\'t exist'));
+    }
+  }
+
+  /**
    * Add a queue item and store it directly to the queue.
    *
    * @param $data
@@ -204,68 +267,6 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     }
     
     return $this->beanstalkd_queue->release($item->beanstalkd_job) ? TRUE: FALSE;
-  }
-
-  /**
-   * watch message queue
-   */
-  public function watch($names) {
-    if (!$this->beanstalkd_queue) {
-      return;
-    }
-
-    $names = is_string($names) ? array($names) : $names;
-    $names = array_map(array($this, '_tubeName'), $names);
-
-    $tubes = $this->beanstalkd_queue->listTubes();
-
-    foreach ($names as $name) {
-      $this->beanstalkd_queue->watch($name);
-    }
-  }
-
-  /**
-   * Queues to ignore
-   */
-  public function ignore($names) {
-    if (!$this->beanstalkd_queue) {
-      return;
-    }
-
-    $names = is_string($names) ? array($names) : $names;
-    $names = array_map(array($this, '_tubeName'), $names);
-
-    $tubes = $this->beanstalkd_queue->listTubes();
-    $names = array_intersect($tubes, $names);
-
-    foreach ($names as $name) {
-      $this->beanstalkd_queue->ignore($name);
-    }
-  }
-
-  /**
-   * Get a job from the Queue
-   */
-  public function peekItem($job_id) {
-    if (!$this->beanstalkd_queue) {
-      return;
-    }
-
-    $job = $this->beanstalkd_queue->peek($job_id);
-
-    if ($job) {
-      $item = unserialize($job->getData());
-      $item->id = $job->getId();
-      $item->beanstalkd_job = $job;
-
-      if (isset($this->tube) && $this->tube != $item->name) {
-        return FALSE;
-      }
-
-      return $item;
-    }
-
-    return FALSE;
   }
 
   public function getError() {
