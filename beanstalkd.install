@@ -37,7 +37,7 @@ function beanstalkd_requirements($phase) {
     );
 
     if (class_exists('BeanstalkdQueue')) {
-      $queue = new BeanstalkdQueue(NULL);
+      $queue = new BeanstalkdQueue(NULL, TRUE);
 
       $requirements['beanstalkd_queue_count'] = array(
         'title' => $t('Beanstalkd Queue count'),
