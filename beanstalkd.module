@@ -68,6 +68,8 @@ function beanstalkd_get_queue_options($name) {
       'fork' => FALSE,
       'reserve_timeout' => 0,
       'priority' => Pheanstalk::DEFAULT_PRIORITY,
+      'forked_extra_timeout' => FALSE,
+      'forked_extra_items' => FALSE,
     );
     $options[$name] += $defaults;
   }
