@@ -330,7 +330,7 @@ if (empty($names)) {
 
 if (isset($args['x'])) {
   beanstalkd_log('Collecting job ' . $args['x']);
-  $item = $queue->peekItem($args['x']);
+  $item = $queue->peek($args['x']);
   if ($item) {
     if (beanstalkd_process_item($item)) {
       $options = beanstalkd_get_queue_options($item->name);
