@@ -21,6 +21,7 @@ function beanstalkd_drush_command() {
     'arguments' => array(
       'server' => 'Specify the server to query',
     ),
+    'aliases' => array('server-stats'),
   );
   $items['beanstalkd-queue-list'] = array(
     'callback' => 'drush_beanstalkd_queue_list',
