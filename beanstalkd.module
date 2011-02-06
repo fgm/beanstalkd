@@ -117,6 +117,7 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   if ($queue_name) {
     $options = beanstalkd_get_queue_options($queue_name);
     $host = $options['host'] . ':' . $options['port'];
+    return isset($queue_list[$host][$queue_name]) ? $queue_list[$host][$queue_name] : array();
   }
   if ($host) {
     return isset($queue_list[$host]) ? $queue_list[$host] : array();
