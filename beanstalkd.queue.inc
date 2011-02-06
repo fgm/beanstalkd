@@ -65,7 +65,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     }
     
     if (method_exists($this->beanstalkd_queue, $name)) {
-      $tube_commands = array('watch', 'ignore', 'statsTube', 'pauseTube');
+      $tube_commands = array('watch', 'ignore', 'statsTube', 'pauseTube', 'useTube');
       $job_commands = array('bury', 'delete', 'release', 'statsJob', 'touch');
       $job_id_commands = array('peek');
       if (in_array($name, $tube_commands) && is_array($arguments[0])) {
