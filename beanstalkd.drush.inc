@@ -28,6 +28,14 @@ function beanstalkd_drush_command() {
     'description' => 'Print a list of all Beanstalkd queues',
     'aliases' => array('queue-list'),
   );
+  $items['beanstalkd-queue-stats'] = array(
+    'callback' => 'drush_beanstalkd_queue_stats',
+    'description' => 'Display the stats for the specified queue',
+    'arguments' => array(
+      'queue' => 'specify the name of the queue',
+    ),
+    'aliases' => array('queue-stats'), 
+  );
 
   return $items;
 }
@@ -100,4 +108,30 @@ function drush_beanstalkd_queue_list() {
 
   drush_print('Available beanstalkd queues:');
   drush_print("\n" . implode("\n", $names));
+}
+
+function drush_beanstalkd_queue_stats($name = NULL) {
+  beanstalkd_load_pheanstalk();
+  drupal_queue_include();
+
+  $names = drupal_map_assoc(beanstalkd_get_queues());
+
+  if (!$name) {
+    $name = drush_choice($names, 'Select a queue to query');
+  }
+  
+  if ($name && isset($names[$name])) {
+    $queue = DrupalQueue::get($name);
+    $stats = $queue->statsTube($name);
+    
+    $rows = array();
+    foreach ($stats as $key => $stat) {
+      $rows[] = array(
+        drupal_ucfirst(str_replace('-', ' ', $key)),
+        $stat,
+      );
+    }
+    
+    drush_print_table($rows);
+  }
 }
