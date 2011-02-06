@@ -26,30 +26,6 @@ function beanstalkd_get_php() {
   return $php_exec;
 }
 
-/**
- * beanstalkd_get_queues().
- */
-function beanstalkd_get_queues() {
-  $queues = module_invoke_all('cron_queue_info');
-  drupal_alter('cron_queue_info', $queues);
-
-  foreach ($queues as $queue => $settings) {
-    $name = 'queue_class_' . $queue;
-    $options = beanstalkd_get_queue_options($queue);
-    if (variable_get($name, variable_get('queue_default_class', 'SystemQueue')) != 'BeanstalkdQueue') {
-      unset($queues[$queue]);
-    }
-    elseif (variable_get('beanstalkd_host', 'localhost') != $options['host']) {
-      unset($queues[$queue]);
-    }
-    elseif (variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT) != $options['port']) {
-      unset($queues[$queue]);
-    }
-  }
-
-  return $queues;
-}
-
 function beanstalkd_log($string, $noeol = FALSE) {
   global $_verbose_mode;
 
@@ -117,10 +93,9 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
 function beanstalkd_process_item($item) {
   global $queue;
 
-  $queues = beanstalkd_get_queues();
+  $info = beanstalkd_get_host_queues(NULL, $item->name);
 
-  if (isset($queues[$item->name])) {
-    $info = $queues[$item->name];
+  if (!empty($info)) {
     $function = $info['worker callback'];
 
     try {
@@ -303,7 +278,17 @@ if (isset($args['p']) || isset($args['port'])) {
   $conf['beanstalkd_port'] = isset($args['p']) ? $args['p'] : $args['port'];
 }
 
-$names = array_keys(beanstalkd_get_queues());
+$queues = beanstalkd_get_host_queues();
+$hostname = variable_get('beanstalkd_host', 'localhost') . ':' . variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT);
+if (isset($queues[$hostname])) {
+  $names = array_keys($queues[$hostname]);
+}
+else {
+  $names = array();
+  foreach ($queues as $hostname => $settings) {
+    $names = array_merge($names, array_keys($settings));
+  }
+}
 
 if (isset($args['l']) || isset($args['list'])) {
   if (!empty($names)) {

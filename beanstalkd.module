@@ -76,3 +76,42 @@ function beanstalkd_get_queue_options($name) {
 
   return $options[$name];
 }
+
+/**
+ * Get a list of all queues which have drush enabled.
+ *
+ * @param $host
+ *  The list of all the queue which are using this specified host
+ *
+ * @return
+ *  If a host is specified then it returns an array of all the settings for the queue.
+ *  otherwise if no host is specified then it will return an array keyed by host for all
+ *  with the settings for all queues.
+ */
+function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
+  static $queue_list;
+  
+  if (!isset($queue_list)) {
+    $queue_list = array();
+    $queues = module_invoke_all('cron_queue_info');
+    drupal_alter('cron_queue_info', $queues);
+
+    foreach ($queues as $queue => $settings) {
+      $name = 'queue_class_' . $queue;
+      $options = beanstalkd_get_queue_options($queue);
+      if (variable_get($name, variable_get('queue_default_class', 'SystemQueue')) == 'BeanstalkdQueue') {
+        $settings['options'] = $options;
+        $queue_list[$options['host'] . ':' . $options['port']][$queue] = $settings;
+      }
+    }
+  }
+  
+  if ($queue_name) {
+    $options = beanstalkd_get_queue_options($queue_name);
+    $host = $options['host'] . ':' . $options['port'];
+  }
+  if ($host) {
+    return isset($queue_list[$host]) ? $queue_list[$host] : array();
+  }
+  return $queue_list;
+}
