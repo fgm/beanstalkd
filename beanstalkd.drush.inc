@@ -36,6 +36,19 @@ function beanstalkd_drush_command() {
     ),
     'aliases' => array('queue-stats'), 
   );
+  $items['beanstalkd-item-stats'] = array(
+    'callback' => 'drush_beanstalkd_item_stats',
+    'description' => 'Displays stats for a specified job in the queue',
+    'arguments' => array(
+      'item id' => 'Item id to display the stats for.',
+    ),
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+      'queue' => 'Specify the queue which the job exists.',
+    ),
+    'aliases' => array('item-stats'),
+  );
 
   return $items;
 }
@@ -133,5 +146,53 @@ function drush_beanstalkd_queue_stats($name = NULL) {
     }
     
     drush_print_table($rows);
+  }
+}
+
+function drush_beanstalkd_item_stats($item_id = NULL) {
+  beanstalkd_load_pheanstalk();
+  drupal_queue_include();
+  $queues = beanstalkd_get_host_queues();
+  
+  if ($name = drush_get_option('queue', NULL)) {
+    $info = beanstalkd_get_host_queues(NULL, $name);
+    $host = $info['options']['host'];
+    $port = $info['options']['port'];
+  }
+  else {
+    $host = drush_get_option('host', 'localhost');
+    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+  }
+  
+  $hostname = $host . ':' . $port;
+
+  if (isset($queues[$hostname])) {
+    if ($item_id) {
+      $queue = new BeanstalkdQueue(NULL);
+      $queue->createConnection($host, $port);
+
+      try {
+        $item = $queue->peek($item_id);
+        $stats = $queue->statsJob($item);
+        $rows = array();
+        foreach ($stats as $key => $stat) {
+          $rows[] = array(
+            drupal_ucfirst(str_replace('-', ' ', $key)),
+            $stat,
+          );
+        }
+
+        drush_print_table($rows);
+      }
+      catch (Exception $e) {
+        drush_log($e->getMessage(), 'error');
+      }
+    }
+    else {
+      drush_log(dt('No item id specified.'), 'error');
+    }
+  }
+  else {
+    drush_log(dt('!host is not a valid hostname', array('!host' => $hostname)), 'error');
   }
 }
