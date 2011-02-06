@@ -89,6 +89,11 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
+      elseif (in_array($name, $job_commands)) {
+        $item = $arguments[0];
+        $arguments[0] = $item->beanstalkd_job;
+        $ret = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+      }
       elseif (in_array($name, $job_id_commands) && is_array($arguments[0])) {
         $ids = $arguments[0];
         foreach ($ids as $id) {
