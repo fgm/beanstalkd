@@ -278,17 +278,8 @@ if (isset($args['p']) || isset($args['port'])) {
   $conf['beanstalkd_port'] = isset($args['p']) ? $args['p'] : $args['port'];
 }
 
-$queues = beanstalkd_get_host_queues();
 $hostname = variable_get('beanstalkd_host', 'localhost') . ':' . variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT);
-if (isset($queues[$hostname])) {
-  $names = array_keys($queues[$hostname]);
-}
-else {
-  $names = array();
-  foreach ($queues as $hostname => $settings) {
-    $names = array_merge($names, array_keys($settings));
-  }
-}
+$names = beanstalkd_get_queues($hostname);
 
 if (isset($args['l']) || isset($args['list'])) {
   if (!empty($names)) {
