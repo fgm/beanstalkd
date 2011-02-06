@@ -124,3 +124,19 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   }
   return $queue_list;
 }
+
+function beanstalkd_get_queues($hostname = NULL) {
+  $queues = beanstalkd_get_host_queues($hostname);
+  
+  if ($hostname) {
+    $names = array_keys($queues);
+  }
+  else {
+    $names = array();
+    foreach ($queues as $hostname => $settings) {
+      $names = array_merge($names, array_keys($settings));
+    }
+  }
+
+  return $names;
+}
