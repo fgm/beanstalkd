@@ -12,7 +12,7 @@ function beanstalkd_drush_command() {
   $items = array();
 
   $items['beanstalkd-queue-list'] = array(
-    'callback' => 'drush_beadstalkd_queue_list',
+    'callback' => 'drush_beanstalkd_queue_list',
     'description' => 'Print a list of all Beanstalkd queues',
     'aliases' => array('queue-list'),
   );
@@ -20,7 +20,7 @@ function beanstalkd_drush_command() {
   return $items;
 }
 
-function drush_beadstalkd_queue_list() {
+function drush_beanstalkd_queue_list() {
   beanstalkd_load_pheanstalk();
   drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
