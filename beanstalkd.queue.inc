@@ -26,7 +26,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       $this->beanstalkd_params = beanstalkd_get_queue_options($name);
 
       try {
-        $this->beanstalkd_queue = new Pheanstalk($this->beanstalkd_params['host'], $this->beanstalkd_params['port']);
+        $this->createConnection($this->beanstalkd_params['host'], $this->beanstalkd_params['port']);
         if ($name) {
           // If a queue name  is past then set this tube to be used and set it to be the 
           // only tube to be watched.
@@ -275,6 +275,10 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     return $this->beanstalkd_queue->release($item->beanstalkd_job) ? TRUE: FALSE;
   }
 
+  public function createConnection($host, $port) {
+    $this->beanstalkd_queue = new Pheanstalk($host, $port);
+  }
+  
   public function getError() {
     if (isset($this->lastError)) {
       return $this->lastError;
