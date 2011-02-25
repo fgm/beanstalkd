@@ -1,6 +1,5 @@
 #!/usr/bin/env php
 <?php
-// $Id$
 
 /**
  * beanstalkd_get_queues().

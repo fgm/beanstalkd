@@ -1,4 +1,3 @@
-$Id$
 
 Beanstalkd is a Drupal module to allow Drupal Queues to take advantage of beanstalkd to process the queues instead of the built in Database queue system that ships with Drupal.
 

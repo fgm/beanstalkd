@@ -1,4 +1,3 @@
-; $Id$
 name = Beanstalk
 description = Client for using the beanstalkd queue system to manage selected drupal queues
 core = 7.x
