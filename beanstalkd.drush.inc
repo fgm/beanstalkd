@@ -55,7 +55,6 @@ function beanstalkd_drush_command() {
 
 function drush_beanstalkd_servers() {
   beanstalkd_load_pheanstalk();
-  drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
   
   drush_print('Available beanstalkd servers:');
@@ -64,7 +63,6 @@ function drush_beanstalkd_servers() {
 
 function drush_beanstalkd_server_stats($host = NULL) {
   beanstalkd_load_pheanstalk();
-  drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
   
   if ($host) {
@@ -111,7 +109,6 @@ function drush_beanstalkd_server_stats($host = NULL) {
 
 function drush_beanstalkd_queue_list() {
   beanstalkd_load_pheanstalk();
-  drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
 
   $names = array();
@@ -125,7 +122,6 @@ function drush_beanstalkd_queue_list() {
 
 function drush_beanstalkd_queue_stats($name = NULL) {
   beanstalkd_load_pheanstalk();
-  drupal_queue_include();
 
   $names = drupal_map_assoc(beanstalkd_get_queues());
 
@@ -151,7 +147,6 @@ function drush_beanstalkd_queue_stats($name = NULL) {
 
 function drush_beanstalkd_item_stats($item_id = NULL) {
   beanstalkd_load_pheanstalk();
-  drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
   
   if ($name = drush_get_option('queue', NULL)) {

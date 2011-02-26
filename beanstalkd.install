@@ -14,8 +14,6 @@ function beanstalkd_requirements($phase) {
   $requirements = array();
 
   if ($phase == 'runtime') {
-    drupal_queue_include();
-
     $path = beanstalkd_pheanstalk_get_path();
     if (!$path) {
       $config = conf_path();

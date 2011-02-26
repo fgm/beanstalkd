@@ -268,7 +268,6 @@ ob_end_flush();
 $start_memory = memory_get_usage();
 
 beanstalkd_load_pheanstalk();
-drupal_queue_include();
 
 if (isset($args['c']) || isset($args['host'])) {
   $conf['beanstalkd_host'] = isset($args['c']) ? $args['c'] : $args['host'];

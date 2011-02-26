@@ -28,7 +28,6 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
    */
   function testQueue() {
     // Create two queues.
-    drupal_queue_include();
 
     // Set random queues to use beanstalkd
     $name1 = $this->randomName();
