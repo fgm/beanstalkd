@@ -61,7 +61,14 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
       
       if ($process_function($item)) {
         beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
-        $queue->deleteItem($item);
+        
+        // This should never happen but sometimes it does.
+        try {
+          $queue->deleteItem($item);
+        }
+        catch (Exception $e) {
+          NULL;
+        }
       }
     }
     else {
