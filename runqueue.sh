@@ -164,8 +164,8 @@ function beanstalkd_shutdown() {
 $script = basename(array_shift($_SERVER['argv']));
 $script_name = realpath($script);
 
-$shortopts = 'hr:s:vlx:c:p:';
-$longopts = array('help', 'root:', 'site:', 'verbose', 'list', 'host:', 'port:');
+$shortopts = 'hr:s:vlx:c:p:q:';
+$longopts = array('help', 'root:', 'site:', 'verbose', 'list', 'host:', 'port:', 'queue:');
 
 $args = @getopt($shortopts, $longopts);
 
@@ -195,6 +195,8 @@ All arguments are long options.
   -c, --host  Specify host of the beanstalkd server.
 
   -p, --port  Specify port of the beanstalkd server.
+  
+  -q , --queue Specify a comma specated list of queues to watch.
 
   -v, --verbose This option displays the options as they are set, but will
               produce errors from setting the session.
@@ -305,6 +307,19 @@ if (isset($args['l']) || isset($args['list'])) {
     echo (t("No queues available\n"));
   }
   exit();
+}
+
+if (isset($args['q']) || isset($args['queue'])) {
+  $filter_queues = explode(',', (isset($args['q']) ? $args['q'] : $args['queue']));
+  
+  $new_queues = array_intersect($names, $filter_queues);
+  $missing_queues = array_diff($filter_queues, $new_queues);
+  
+  if (!empty($missing_queues)) {
+    echo (t("Queues @queues are missing.\n", array('@queues' => implode(', ', $missing_queues))));
+    exit();
+  }
+  $names = $new_queues;
 }
 
 // Make sure all the tubes are created
