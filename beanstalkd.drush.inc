@@ -48,6 +48,18 @@ function beanstalkd_drush_command() {
     ),
     'aliases' => array('item-stats'),
   );
+  $items['beanstalkd-peek-ready'] = array(
+    'arguments' => array(
+      'queue' => 'Queue to inspect for ready items',
+    ),
+    'callback' => 'drush_beanstalkd_peek_ready',
+    'description' => 'Display the next job which is ready to be run.',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+    ),
+    'aliases' => array('peek-ready'),
+  );
 
   return $items;
 }
@@ -193,5 +205,94 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   }
   else {
     drush_log(dt('!host is not a valid hostname', array('!host' => $hostname)), 'error');
+  }
+}
+
+function drush_beanstalkd_peek_ready($name = NULL) {
+  beanstalkd_load_pheanstalk();
+  drupal_queue_include();
+  $queues = beanstalkd_get_host_queues();
+  
+  if ($name = drush_get_option('queue', NULL)) {
+    $info = beanstalkd_get_host_queues(NULL, $name);
+    $host = $info['options']['host'];
+    $port = $info['options']['port'];
+  }
+  else {
+    $host = drush_get_option('host', 'localhost');
+    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+  }
+
+  $hostname = $host . ':' . $port;
+
+  if (isset($queues[$hostname])) {
+    $queue = new BeanstalkdQueue(NULL);
+    $queue->createConnection($host, $port);
+
+    $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
+    _drush_beanstalkd_filter_ready($queue, TRUE);
+    $names = array_filter($names, '_drush_beanstalkd_filter_ready');
+
+    if (empty($names)) {
+      drush_log(dt('There a currently no queues with ready jobs'), 'error');
+      return;
+    }
+
+    if (!$name && count($names) > 1) {
+      if (!$name = drush_choice($names, 'Select a queue to query')) {
+        return;
+      }
+    }
+    elseif (!$name && !empty($names)) {
+      $name = reset($names);
+    }
+
+    try {
+      $queue->useTube($name);
+      $item = $queue->peekReady();
+      $stats = $queue->statsJob($item);
+      $rows = array();
+      foreach ($stats as $key => $stat) {
+        $rows[] = array(
+          drupal_ucfirst(str_replace('-', ' ', $key)),
+          $stat,
+        );
+        
+        if ($key == 'id') {
+          $info = beanstalkd_get_host_queues(NULL, $item->name);
+          if (isset($info['description callback']) && function_exists($info['description callback'])) {
+            $rows[] = array(
+              'Description',
+              $info['description callback']($item->data),
+            );
+          }
+        }
+      }
+
+      drush_print_table($rows);
+    }
+    catch (Exception $e) {
+      drush_log($e->getMessage(), 'error');
+    }
+  }
+  else {
+    drush_log(dt('!host is not a valid hostname', array('!host' => $hostname)), 'error');
+  }
+}
+
+function _drush_beanstalkd_filter_ready($a, $init = FALSE) {
+  static $queue;
+  
+  if ($init) {
+    $queue = $a;
+    return;
+  }
+  
+  try {
+    $stats = $queue->statsTube($a);
+    return $stats['current-jobs-ready'] > 0 ? TRUE : FALSE;
+  }
+  catch (Exception $e) {
+    return FALSE;
   }
 }
