@@ -153,29 +153,6 @@ function beanstalkd_shutdown() {
   beanstalkd_log('Shutdown complete.');
 }
 
-function beanstalkd_execute($item) {
-  global $args, $script_name, $_verbose_mode;
-
-  $php_exec = beanstalkd_get_php();
-
-  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
-
-  if ($_verbose_mode) {
-    $cmd .= ' -v';
-  }
-
-  beanstalkd_log('Executing: ' . $cmd);
-  passthru($cmd, $retval);
-
-  beanstalkd_log('Return Val: ' . $retval);
-
-  return $retval == 0;
-}
-
-function beanstalkd_shutdown() {
-  beanstalkd_log('Shutdown complete.');
-}
-
 /**
  * Drupal shell execution script
  */
