@@ -269,7 +269,7 @@ function drush_beanstalkd_peek_items($type, $name) {
     $names = array_filter($names, '_drush_beanstalkd_filter_type');
 
     if (empty($names)) {
-      drush_log(dt('There a currently no queues with !type jobs', array('!type' => $type)), 'error');
+      drush_log(dt('There is currently no queues with !type jobs', array('!type' => $type)), 'error');
       return;
     }
 
