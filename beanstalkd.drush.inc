@@ -84,6 +84,19 @@ function beanstalkd_drush_command() {
     ),
     'aliases' => array('peek-delayed'),
   );
+  $items['beanstalkd-kick'] = array(
+    'arguments' => array(
+      '' => 'number of items to kick to allow them to be reprocessed.',
+    ),
+    'callback' => 'drush_beanstalkd_kick',
+    'description' => 'Kick n items so that they will be reprocessed',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+      'queue' => 'Specify the queue to kick the items on.',
+    ),
+    'aliases' => array('kick'),
+  );
   return $items;
 }
 
@@ -330,5 +343,68 @@ function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
   }
   catch (Exception $e) {
     return FALSE;
+  }
+}
+
+function drush_beanstalkd_kick($items = NULL) {
+  if (!is_numeric($items)) {
+    drush_log(dt('@items is not a numeric value', array('@items' => $items)), 'error');
+    return;
+  }
+  elseif (!$items) {
+    drush_log(dt('@items needed to be a valid number greater than 0', array('@items' => $items)), 'error');
+    return;
+  }
+
+  beanstalkd_load_pheanstalk();
+  drupal_queue_include();
+  $queues = beanstalkd_get_host_queues();
+  
+  if ($name = drush_get_option('queue', NULL)) {
+    $info = beanstalkd_get_host_queues(NULL, $name);
+    $host = $info['options']['host'];
+    $port = $info['options']['port'];
+  }
+  else {
+    $host = drush_get_option('host', 'localhost');
+    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+  }
+
+  $hostname = $host . ':' . $port;
+  
+  $name = drush_get_option('queue', NULL);
+
+  if (isset($queues[$hostname])) {
+    $queue = new BeanstalkdQueue(NULL);
+    $queue->createConnection($host, $port);
+
+    $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
+    _drush_beanstalkd_filter_type($queue, 'buried', TRUE);
+    $names = array_filter($names, '_drush_beanstalkd_filter_type');
+
+    if (!$name) {
+      if (empty($names)) {
+        drush_log(dt('There is currently no queues with buried jobs'), 'error');
+        return;
+      }
+
+      if (!$name && count($names) > 1) {
+        if (!$name = drush_choice($names, 'Select a queue to query')) {
+          return;
+        }
+      }
+      elseif (!$name && !empty($names)) {
+        $name = reset($names);
+      }
+    }
+    else if (in_array($name, $names) === FALSE) {
+      drush_log(dt('There are currently buried items on queue @name', array('@name' => $name)), 'error');
+      return;
+    }
+    
+    $queue->useTube($name);
+    $items_kicked = $queue->kick($items);
+    
+    drush_log(format_plural($items_kicked, '@count item kicked', '@count items kicked'), 'info');
   }
 }
