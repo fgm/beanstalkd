@@ -69,6 +69,7 @@ function beanstalkd_get_queue_options($name) {
       'reserve_timeout' => 0,
       'ttr' => Pheanstalk::DEFAULT_TTR,
       'priority' => Pheanstalk::DEFAULT_PRIORITY,
+      'release_delay' => Pheanstalk::DEFAULT_DELAY,
       'forked_extra_timeout' => FALSE,
       'forked_extra_items' => FALSE,
     );

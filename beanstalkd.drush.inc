@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file
@@ -49,7 +48,55 @@ function beanstalkd_drush_command() {
     ),
     'aliases' => array('item-stats'),
   );
-
+  $items['beanstalkd-peek-ready'] = array(
+    'arguments' => array(
+      'queue' => 'Queue to inspect for ready items',
+    ),
+    'callback' => 'drush_beanstalkd_peek_ready',
+    'description' => 'Display the next job which is ready to be run.',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+    ),
+    'aliases' => array('peek-ready'),
+  );
+  $items['beanstalkd-peek-buried'] = array(
+    'arguments' => array(
+      'queue' => 'Queue to inspect for buried items',
+    ),
+    'callback' => 'drush_beanstalkd_peek_buried',
+    'description' => 'Display the next job which has been buried.',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+    ),
+    'aliases' => array('peek-buried'),
+  );
+  $items['beanstalkd-peek-delayed'] = array(
+    'arguments' => array(
+      'queue' => 'Queue to inspect for delayed items',
+    ),
+    'callback' => 'drush_beanstalkd_peek_delayed',
+    'description' => 'Display the next job which has been delayed.',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+    ),
+    'aliases' => array('peek-delayed'),
+  );
+  $items['beanstalkd-kick'] = array(
+    'arguments' => array(
+      '' => 'number of items to kick to allow them to be reprocessed.',
+    ),
+    'callback' => 'drush_beanstalkd_kick',
+    'description' => 'Kick n items so that they will be reprocessed',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+      'queue' => 'Specify the queue to kick the items on.',
+    ),
+    'aliases' => array('kick'),
+  );
   return $items;
 }
 
@@ -189,5 +236,170 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   }
   else {
     drush_log(dt('!host is not a valid hostname', array('!host' => $hostname)), 'error');
+  }
+}
+
+function drush_beanstalkd_peek_ready($name = NULL) {
+  drush_beanstalkd_peek_items('ready', $name);
+}
+
+function drush_beanstalkd_peek_buried($name = NULL) {
+  drush_beanstalkd_peek_items('buried', $name);
+}
+
+function drush_beanstalkd_peek_delayed($name = NULL) {
+  drush_beanstalkd_peek_items('delayed', $name);
+}
+
+function drush_beanstalkd_peek_items($type, $name) {
+  beanstalkd_load_pheanstalk();
+  drupal_queue_include();
+  $queues = beanstalkd_get_host_queues();
+  
+  if ($name = drush_get_option('queue', NULL)) {
+    $info = beanstalkd_get_host_queues(NULL, $name);
+    $host = $info['options']['host'];
+    $port = $info['options']['port'];
+  }
+  else {
+    $host = drush_get_option('host', 'localhost');
+    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+  }
+
+  $hostname = $host . ':' . $port;
+
+  if (isset($queues[$hostname])) {
+    $queue = new BeanstalkdQueue(NULL);
+    $queue->createConnection($host, $port);
+
+    $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
+    _drush_beanstalkd_filter_type($queue, $type, TRUE);
+    $names = array_filter($names, '_drush_beanstalkd_filter_type');
+
+    if (empty($names)) {
+      drush_log(dt('There is currently no queues with !type jobs', array('!type' => $type)), 'error');
+      return;
+    }
+
+    if (!$name && count($names) > 1) {
+      if (!$name = drush_choice($names, 'Select a queue to query')) {
+        return;
+      }
+    }
+    elseif (!$name && !empty($names)) {
+      $name = reset($names);
+    }
+
+    try {
+      $queue->useTube($name);
+      $item = $queue->{'peek' . drupal_ucfirst($type)}();
+      $stats = $queue->statsJob($item);
+      $rows = array();
+      foreach ($stats as $key => $stat) {
+        $rows[] = array(
+          drupal_ucfirst(str_replace('-', ' ', $key)),
+          $stat,
+        );
+        
+        if ($key == 'id') {
+          $info = beanstalkd_get_host_queues(NULL, $item->name);
+          if (isset($info['description callback']) && function_exists($info['description callback'])) {
+            $rows[] = array(
+              'Description',
+              $info['description callback']($item->data),
+            );
+          }
+        }
+      }
+
+      drush_print_table($rows);
+    }
+    catch (Exception $e) {
+      drush_log($e->getMessage(), 'error');
+    }
+  }
+  else {
+    drush_log(dt('!host is not a valid hostname', array('!host' => $hostname)), 'error');
+  }
+}
+
+function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
+  static $queue, $type;
+  
+  if ($init) {
+    $queue = $a;
+    $type = $b;
+    return;
+  }
+  
+  try {
+    $stats = $queue->statsTube($a);
+    return $stats['current-jobs-' . $type] > 0 ? TRUE : FALSE;
+  }
+  catch (Exception $e) {
+    return FALSE;
+  }
+}
+
+function drush_beanstalkd_kick($items = NULL) {
+  if (!is_numeric($items)) {
+    drush_log(dt('@items is not a numeric value', array('@items' => $items)), 'error');
+    return;
+  }
+  elseif (!$items) {
+    drush_log(dt('@items needed to be a valid number greater than 0', array('@items' => $items)), 'error');
+    return;
+  }
+
+  beanstalkd_load_pheanstalk();
+  drupal_queue_include();
+  $queues = beanstalkd_get_host_queues();
+  
+  if ($name = drush_get_option('queue', NULL)) {
+    $info = beanstalkd_get_host_queues(NULL, $name);
+    $host = $info['options']['host'];
+    $port = $info['options']['port'];
+  }
+  else {
+    $host = drush_get_option('host', 'localhost');
+    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+  }
+
+  $hostname = $host . ':' . $port;
+  
+  $name = drush_get_option('queue', NULL);
+
+  if (isset($queues[$hostname])) {
+    $queue = new BeanstalkdQueue(NULL);
+    $queue->createConnection($host, $port);
+
+    $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
+    _drush_beanstalkd_filter_type($queue, 'buried', TRUE);
+    $names = array_filter($names, '_drush_beanstalkd_filter_type');
+
+    if (!$name) {
+      if (empty($names)) {
+        drush_log(dt('There is currently no queues with buried jobs'), 'error');
+        return;
+      }
+
+      if (!$name && count($names) > 1) {
+        if (!$name = drush_choice($names, 'Select a queue to query')) {
+          return;
+        }
+      }
+      elseif (!$name && !empty($names)) {
+        $name = reset($names);
+      }
+    }
+    else if (in_array($name, $names) === FALSE) {
+      drush_log(dt('There are currently buried items on queue @name', array('@name' => $name)), 'error');
+      return;
+    }
+    
+    $queue->useTube($name);
+    $items_kicked = $queue->kick($items);
+    
+    drush_log(format_plural($items_kicked, '@count item kicked', '@count items kicked'), 'info');
   }
 }

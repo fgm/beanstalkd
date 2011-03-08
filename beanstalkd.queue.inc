@@ -277,7 +277,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return FALSE;
     }
     
-    return $this->beanstalkd_queue->release($item->beanstalkd_job) ? TRUE: FALSE;
+    return $this->beanstalkd_queue->release($item->beanstalkd_job, $this->beanstalkd_params['priority'], $this->beanstalkd_params['release_delay']) ? TRUE: FALSE;
   }
 
   public function createConnection($host, $port) {
