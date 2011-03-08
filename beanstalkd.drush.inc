@@ -60,7 +60,30 @@ function beanstalkd_drush_command() {
     ),
     'aliases' => array('peek-ready'),
   );
-
+  $items['beanstalkd-peek-buried'] = array(
+    'arguments' => array(
+      'queue' => 'Queue to inspect for buried items',
+    ),
+    'callback' => 'drush_beanstalkd_peek_buried',
+    'description' => 'Display the next job which has been buried.',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+    ),
+    'aliases' => array('peek-buried'),
+  );
+  $items['beanstalkd-peek-delayed'] = array(
+    'arguments' => array(
+      'queue' => 'Queue to inspect for delayed items',
+    ),
+    'callback' => 'drush_beanstalkd_peek_delayed',
+    'description' => 'Display the next job which has been delayed.',
+    'options' => array(
+      'host' => 'Specify the host of the beanstalkd server',
+      'port' => 'Specify the port of the beanstalkd server',
+    ),
+    'aliases' => array('peek-delayed'),
+  );
   return $items;
 }
 
@@ -209,6 +232,18 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
 }
 
 function drush_beanstalkd_peek_ready($name = NULL) {
+  drush_beanstalkd_peek_items('ready', $name);
+}
+
+function drush_beanstalkd_peek_buried($name = NULL) {
+  drush_beanstalkd_peek_items('buried', $name);
+}
+
+function drush_beanstalkd_peek_delayed($name = NULL) {
+  drush_beanstalkd_peek_items('delayed', $name);
+}
+
+function drush_beanstalkd_peek_items($type, $name) {
   beanstalkd_load_pheanstalk();
   drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
@@ -230,11 +265,11 @@ function drush_beanstalkd_peek_ready($name = NULL) {
     $queue->createConnection($host, $port);
 
     $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
-    _drush_beanstalkd_filter_ready($queue, TRUE);
-    $names = array_filter($names, '_drush_beanstalkd_filter_ready');
+    _drush_beanstalkd_filter_type($queue, $type, TRUE);
+    $names = array_filter($names, '_drush_beanstalkd_filter_type');
 
     if (empty($names)) {
-      drush_log(dt('There a currently no queues with ready jobs'), 'error');
+      drush_log(dt('There a currently no queues with !type jobs', array('!type' => $type)), 'error');
       return;
     }
 
@@ -249,7 +284,7 @@ function drush_beanstalkd_peek_ready($name = NULL) {
 
     try {
       $queue->useTube($name);
-      $item = $queue->peekReady();
+      $item = $queue->{'peek' . drupal_ucfirst($type)}();
       $stats = $queue->statsJob($item);
       $rows = array();
       foreach ($stats as $key => $stat) {
@@ -280,17 +315,18 @@ function drush_beanstalkd_peek_ready($name = NULL) {
   }
 }
 
-function _drush_beanstalkd_filter_ready($a, $init = FALSE) {
-  static $queue;
+function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
+  static $queue, $type;
   
   if ($init) {
     $queue = $a;
+    $type = $b;
     return;
   }
   
   try {
     $stats = $queue->statsTube($a);
-    return $stats['current-jobs-ready'] > 0 ? TRUE : FALSE;
+    return $stats['current-jobs-' . $type] > 0 ? TRUE : FALSE;
   }
   catch (Exception $e) {
     return FALSE;
