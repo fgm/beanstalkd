@@ -103,6 +103,7 @@ function beanstalkd_process_item($item) {
   global $queue;
 
   $info = beanstalkd_get_host_queues(NULL, $item->name);
+  $queue_defaults = beanstalkd_get_queue_options($item->name);
 
   if (!empty($info)) {
     $function = $info['worker callback'];
@@ -121,7 +122,13 @@ function beanstalkd_process_item($item) {
     }
     catch (Exception $e) {
       beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
-      $queue->releaseItem($item);
+      $stats = $queue->statsJob($item);
+      if ($stats['releases'] < $queue_defaults['retries']) {
+        $queue->release($item, $queue_defaults['priority'], $queue_defaults['release_delay']);
+      }
+      else {
+        $queue->bury($item);
+      }
       return FALSE;
     }
   }
