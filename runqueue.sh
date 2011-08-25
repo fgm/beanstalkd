@@ -242,7 +242,9 @@ if (isset($args['r']) || isset($args['root'])) {
 }
 else {
   $path = $cwd;
-  while ($path && !(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
+  $prev_path = NULL;
+  while ($path && $prev_path != $path && !(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
+    $prev_path = $path;
     $path = dirname($path);
   }
 
