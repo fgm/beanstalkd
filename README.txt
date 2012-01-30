@@ -44,6 +44,7 @@ $conf['beanstalk_queue_{queue name}'] = array(
   'ttr' => 60, // Seconds a job can be reserved for
   'release_delay' => 0 // Seconds to delay a job
   'priority' => 1024, // Sets the priority of the job
+  'delay' => 0, // Set the default delay for a queue
 );
 
 Overall queue defaults can be set like so.
@@ -56,6 +57,7 @@ $conf['beanstalk_default_queue'] = array(
   'ttr' => 60, // Seconds a job can be reserved for
   'release_delay' => 0 // Seconds to delay a job
   'priority' => 1024, // Sets the priority of the job
+  'delay' => 0, // Set the default delay for a queue
 );
 
 If any options are missed then they will be populated with the default options.

@@ -150,7 +150,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     $record->data = $data;
     $record = serialize($record);
 
-    return $this->beanstalkd_queue->put($record, $this->beanstalkd_params['priority'], Pheanstalk::DEFAULT_DELAY, $this->beanstalkd_params['ttr']) ? TRUE : FALSE;
+    return $this->beanstalkd_queue->put($record, $this->beanstalkd_params['priority'], $this->beanstalkd_params['delay'], $this->beanstalkd_params['ttr']) ? TRUE : FALSE;
   }
 
   /**
