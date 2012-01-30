@@ -253,7 +253,6 @@ function drush_beanstalkd_peek_delayed($name = NULL) {
 
 function drush_beanstalkd_peek_items($type, $name) {
   beanstalkd_load_pheanstalk();
-  drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
   
   if ($name = drush_get_option('queue', NULL)) {
