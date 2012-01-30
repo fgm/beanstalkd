@@ -79,6 +79,7 @@ function beanstalkd_get_queue_options($name) {
       'release_delay' => Pheanstalk::DEFAULT_DELAY,
       'forked_extra_timeout' => FALSE,
       'forked_extra_items' => FALSE,
+      'delay' => Pheanstalk::DEFAULT_DELAY,
     );
     $options[$name] += $defaults;
   }
