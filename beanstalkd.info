@@ -6,3 +6,4 @@ files[] = beanstalkd.module
 files[] = beanstalkd.install
 files[] = beanstalkd.admin.inc
 files[] = beanstalkd.queue.inc
+files[] = beanstalkd.test

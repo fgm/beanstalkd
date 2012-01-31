@@ -19,7 +19,7 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
   }
 
   public function setUp() {
-    parent::setUp('drupal_queue', 'beanstalkd');
+    parent::setUp('beanstalkd');
   }
 
   /**
