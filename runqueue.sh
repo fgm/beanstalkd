@@ -135,11 +135,12 @@ function beanstalkd_process_item($item) {
 }
 
 function beanstalkd_execute($item) {
-  global $args, $script_name, $_verbose_mode;
+  global $args, $script_name, $_verbose_mode, $hostname;
 
+  $parts = parse_url($hostname);
   $php_exec = beanstalkd_get_php();
 
-  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
+  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id . ' -c ' . $parts['host'] . ' -p ' . $parts['port'];
 
   if ($_verbose_mode) {
     $cmd .= ' -v';
