@@ -12,7 +12,7 @@ function beanstalkd_get_php() {
       $php_exec = realpath($_ENV['_']);
     }
     elseif (isset($_SERVER['_'])) {
-      $php_exec = $_SERVER['_'];
+      $php_exec = realpath($_SERVER['_']);
     }
     else {
       exec('which php', $output, $retval);
@@ -111,13 +111,18 @@ function beanstalkd_process_item($item) {
       }
 
       ini_set('display_errors', 0);
+      timer_start('beanstalkd_process_item');
       $function($item->data);
+      $timer = timer_read('beanstalkd_process_item');
       ini_set('display_errors', 1);
+      
+      watchdog('beanstalkd', 'Processed job @id for queue @name taking @timerms<br />@description',  array('@id' => $item->id, '@name' => $item->name, '@timer' => $timer, '@description' => (isset($info['description callback']) && function_exists($info['description callback']) ? $info['description callback']($item->data) : '')), WATCHDOG_NOTICE);
 
       return TRUE;
     }
     catch (Exception $e) {
       beanstalkd_log(t('Exception caught: @message', array('@message' => $e->getMessage())));
+      watchdog('beanstalkd', 'Job @id - @name: Exception caught: @message', array('@id' => $item->id, '@name' => $item->name, '@message' => $e->getMessage()), WATCHDOG_ERROR);
       $stats = $queue->statsJob($item);
       if ($stats['releases'] < $queue_defaults['retries']) {
         $queue->release($item, $queue_defaults['priority'], $queue_defaults['release_delay']);
@@ -131,11 +136,12 @@ function beanstalkd_process_item($item) {
 }
 
 function beanstalkd_execute($item) {
-  global $args, $script_name, $_verbose_mode;
+  global $args, $script_name, $_verbose_mode, $hostname;
 
+  $parts = parse_url($hostname);
   $php_exec = beanstalkd_get_php();
 
-  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id;
+  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id . ' -c ' . $parts['host'] . ' -p ' . $parts['port'];
 
   if ($_verbose_mode) {
     $cmd .= ' -v';

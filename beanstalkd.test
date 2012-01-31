@@ -31,8 +31,8 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
     // Set random queues to use beanstalkd
     $name1 = $this->randomName();
     $name2 = $this->randomName();
-    variable_set('queue_module_' . $name1, 'Beanstalkd');
-    variable_set('queue_module_' . $name2, 'Beanstalkd');
+    variable_set('queue_class_' . $name1, 'BeanstalkdQueue');
+    variable_set('queue_class_' . $name2, 'BeanstalkdQueue');
 
     $queue1 = DrupalQueue::get($name1);
     $queue1->createQueue();
