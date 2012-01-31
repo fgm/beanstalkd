@@ -95,8 +95,13 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   
   if (!isset($queue_list)) {
     $queue_list = array();
-    $queues = module_invoke_all('cron_queue_info');
-    drupal_alter('cron_queue_info', $queues);
+    $cron_queues = module_invoke_all('cron_queue_info');
+    drupal_alter('cron_queue_info', $cron_queues);
+
+    // Additionally, check for modules implementing hook_queue_info.
+    $queues = module_invoke_all('queue_info');
+    drupal_alter('queue_info', $queues);
+    $queues = array_merge($queues, $cron_queues);
 
     foreach ($queues as $queue => $settings) {
       $name = 'queue_class_' . $queue;
