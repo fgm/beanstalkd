@@ -13,7 +13,7 @@ function beanstalkd_get_php() {
       $php_exec = realpath($_ENV['_']);
     }
     elseif (isset($_SERVER['_'])) {
-      $php_exec = $_SERVER['_'];
+      $php_exec = realpath($_SERVER['_']);
     }
     else {
       exec('which php', $output, $retval);
