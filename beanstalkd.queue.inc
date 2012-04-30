@@ -71,6 +71,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
 
       $ret = array();
 
+      // Commands: put, putInTube
       if (in_array($name, $put_commands)) {
         // If we're putting - shift the current tube name into the front of the arguments
         if ($name == 'put') {
@@ -102,6 +103,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
+      // Commands: watch, ignore, statsTube, pauseTube, useTube
       elseif (in_array($name, $tube_commands)) {
         $tubes = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
 
@@ -111,6 +113,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }        
       }
+      // Commands: bury, delete, release, statsJob, touch
       elseif (in_array($name, $job_commands)) {
         $items = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
 
@@ -119,6 +122,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
+      // Commands: peek
       elseif (in_array($name, $job_id_commands) && is_array($arguments[0])) {
         $ids = $arguments[0];
         foreach ($ids as $id) {
@@ -126,6 +130,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
+      // Else all other commands
       else {
         $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
       }
