@@ -42,11 +42,14 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
   $process_count = 0;
 
   while (1) {
-    $item = $queue->claimItem(3600, 0);
+    $items = $queue->reserve(0);
+    $item = reset($items);
+    
     if (!$item) {
       if ($process_time === FALSE && $process_items === FALSE) {
         beanstalkd_log(t("Waiting for next item to be claimed"));
-        $item = $queue->claimItem(3600, NULL);
+        $items = $queue->reserve(NULL);
+        $item = reset($items);
       }
       else {
         // There are no more items, and as we have limits we just want to return.
@@ -63,7 +66,7 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
         
         // This should never happen but sometimes it does.
         try {
-          $queue->deleteItem($item);
+          $queue->delete($item);
         }
         catch (Exception $e) {
           NULL;
