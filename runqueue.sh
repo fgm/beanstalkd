@@ -127,6 +127,7 @@ function beanstalkd_process_item($item) {
       beanstalkd_log(t("Exception caught: @message in @file on line @line.\n@trace", array('@message' => $e->getMessage(), '@file' => $e->getFile(), '@line' => $e->getLine(), '@trace' => $e->getTraceAsString())));
       watchdog('beanstalkd', 'Job @id - @name: Exception caught: @message in @file on line @line.<br/><pre>@trace</pre>', array('@id' => $item->id, '@name' => $item->name, '@message' => $e->getMessage(), '@file' => $e->getFile(), '@line' => $e->getLine(), '@trace' => $e->getTraceAsString()), WATCHDOG_ERROR);
       $stats = $queue->statsJob($item);
+      $queue_defaults = beanstalkd_get_queue_options($item->name);
       if ($stats['releases'] < $queue_defaults['retries']) {
         $queue->release($item, $queue_defaults['priority'], $queue_defaults['release_delay']);
       }
