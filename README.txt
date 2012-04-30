@@ -16,9 +16,11 @@ Requirements
 2. sites/all/libraries
 3. sites/{config}/libraries
 
-Use the following command in the beanstalkd module directory
+Use the following command in one of the above directories.
 
 $ git clone git://github.com/pda/pheanstalk.git
+
+or download the latest version from https://github.com/pda/pheanstalk and untar/unzip it into one of the above directories.
 
 Installation
 ------------
