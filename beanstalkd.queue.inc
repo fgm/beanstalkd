@@ -211,7 +211,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    *   and either the queue is empty or there is some other non-recoverable
    *   problem.
    */
-  public function claimItem($lease_time = 3600, $timeout = TRUE) {
+  public function claimItem($lease_time = 3600) {
     if (!$this->beanstalkd_queue) {
       return FALSE;
     }
@@ -226,16 +226,6 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return $item;
     }
     return FALSE;
-  }
-
-  /**
-   * Claim the next item on any of the tubes which are being watched. Since this is a blocking
-   * method it will not return until and item is claimed.
-   *
-   * This method has been depreciated. Use $this->claimItem(3600, NULL)
-   */
-  public function claimItemBlocking() {
-    return $this->claimItem(3600, NULL);
   }
 
   /**
