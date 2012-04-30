@@ -64,11 +64,45 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     }
     
     if (method_exists($this->beanstalkd_queue, $name)) {
+      $put_commands = array('put', 'putInTube');
       $tube_commands = array('watch', 'ignore', 'statsTube', 'pauseTube', 'useTube');
       $job_commands = array('bury', 'delete', 'release', 'statsJob', 'touch');
       $job_id_commands = array('peek');
 
-      if (in_array($name, $tube_commands)) {
+      $ret = array();
+
+      if (in_array($name, $put_commands)) {
+        // If we're putting - shift the current tube name into the front of the arguments
+        if ($name == 'put') {
+          array_unshift($arguments, array($this->tube));
+          $name = 'putInTube';
+        }
+
+        // Force the tubes into an array
+        $tubes = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
+
+        // Now rebuild argument 1 (which should be $data) into a serialized object
+        $record = new stdClass();
+        $record->data = $arguments[1];
+
+        // Now overlay some default parameters
+        $arguments += array(
+          2 => $this->beanstalkd_params['priority'],
+          3 => $this->beanstalkd_params['delay'],
+          4 => $this->beanstalkd_params['ttr'],
+        );
+
+        foreach ($tubes as $tube) {
+          $tube_name = $this->_tubeName($tube);
+          $arguments[0] = $tube_name;
+
+          $record->name = $tube;
+          $arguments[1] = serialize($record);
+          
+          $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+        }
+      }
+      elseif (in_array($name, $tube_commands)) {
         $tubes = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
 
         foreach ($tubes as $tube) {
@@ -128,12 +162,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return FALSE;
     }
 
-    $record = new stdClass();
-    $record->name = $this->tube;
-    $record->data = $data;
-    $record = serialize($record);
-
-    return $this->beanstalkd_queue->put($record, $this->beanstalkd_params['priority'], $this->beanstalkd_params['delay'], $this->beanstalkd_params['ttr']) ? TRUE : FALSE;
+    return (bool)$this->put($data);
   }
 
   /**
