@@ -190,11 +190,12 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     }
 
     if ($this->tube) {
-      $stats = $this->beanstalkd_queue->statsTube($this->_tubeName($this->tube));
+      $stats = $this->statsTube($this->tube);
     }
     else {
-      $stats = $this->beanstalkd_queue->stats();
+      $stats = $this->stats();
     }
+    $stats = reset($stats);
     return $stats['current-jobs-ready'];
   }
 
@@ -221,14 +222,10 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return FALSE;
     }
 
-    $timeout = ($timeout === TRUE) ? $this->beanstalkd_params['reserve_timeout'] : $timeout;
-
-    $job = $this->beanstalkd_queue->reserve($timeout);
-    if ($job) {
-      $item = unserialize($job->getData());
-      $item->id = $job->getId();
-      $item->beanstalkd_job = $job;
-      return $item;
+    $jobs = $this->reserve(0);
+    if (!empty($jobs)) {
+      // We should only ever get one job, but if we have somehow reserved more than 1, the additional jobs will timeout and get put back onto the list. So it shouldn't get lost.
+      return reset($jobs);
     }
     return FALSE;
   }
@@ -244,7 +241,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return;
     }
 
-    $this->beanstalkd_queue->delete($item->beanstalkd_job);
+    $this->delete($item);
   }
 
   /**
@@ -284,7 +281,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return FALSE;
     }
     
-    return $this->beanstalkd_queue->release($item->beanstalkd_job, $this->beanstalkd_params['priority'], $this->beanstalkd_params['release_delay']) ? TRUE: FALSE;
+    return $this->release($item->beanstalkd_job, $this->beanstalkd_params['priority'], $this->beanstalkd_params['release_delay']) ? TRUE: FALSE;
   }
 
   public function createConnection($host, $port) {
