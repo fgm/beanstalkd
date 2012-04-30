@@ -5,6 +5,39 @@
  * Provide core implementation of beanstalkd support for Queues
  */
 
+
+/**
+ * Implements hook_menu()
+ */
+function beanstalkd_menu() {
+  $items = array();
+
+  $items['admin/reports/beanstalkd'] = array(
+    'title' => 'Beanstalkd Stats',
+    'description' => 'Retreives statistics from the beanstalkd server.',
+    'page callback' => 'beanstalkd_admin_stats',
+    'access arguments' => array('access beanstalkd stats'),
+    'file' => 'beanstalkd.admin.inc',
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_permissions()
+ */
+function beanstalkd_permissions() {
+  return array(
+    'access beanstalkd stats' => array(
+      'title' => t('Access Beanstalkd Stats'),
+      'description' => t('Access the statistics report for the beanstalkd server.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+
 /**
  * Get Pheanstalk path
  */
