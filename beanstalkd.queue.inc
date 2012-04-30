@@ -67,31 +67,23 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       $tube_commands = array('watch', 'ignore', 'statsTube', 'pauseTube', 'useTube');
       $job_commands = array('bury', 'delete', 'release', 'statsJob', 'touch');
       $job_id_commands = array('peek');
-      if (in_array($name, $tube_commands) && is_array($arguments[0])) {
-        $ret = array();
-        $tubes = $arguments[0];
+
+      if (in_array($name, $tube_commands)) {
+        $tubes = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
+
         foreach ($tubes as $tube) {
           $tube = $this->_tubeName($tube);
           $arguments[0] = $tube;
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }        
       }
-      elseif (in_array($name, $tube_commands)) {
-        $arguments[0] = $this->_tubeName($arguments[0]);
-        $ret = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
-      }
-      elseif (in_array($name, $job_commands) && is_array($arguments[0])) {
-        $ret = array();
-        $items = $arguments[0];
+      elseif (in_array($name, $job_commands)) {
+        $items = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
+
         foreach ($items as $item) {
           $arguments[0] = $item->beanstalkd_job;
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
-      }
-      elseif (in_array($name, $job_commands)) {
-        $item = $arguments[0];
-        $arguments[0] = $item->beanstalkd_job;
-        $ret = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
       }
       elseif (in_array($name, $job_id_commands) && is_array($arguments[0])) {
         $ids = $arguments[0];
@@ -101,27 +93,18 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
         }
       }
       else {
-        $ret = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
+        $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
       }
       
-      if (is_array($ret)) {
-        foreach ($ret as $id => $object) {
-          if (is_object($object) && is_a($object, 'Pheanstalk_Job')) {
-            $item = unserialize($object->getData());
-            $item->id = $object->getId();
-            $item->beanstalkd_job = $object;
-            $ret[$id] = $item;
-          }
+      foreach ($ret as $id => $object) {
+        if (is_object($object) && is_a($object, 'Pheanstalk_Job')) {
+          $item = unserialize($object->getData());
+          $item->id = $object->getId();
+          $item->beanstalkd_job = $object;
+          $ret[$id] = $item;
         }
       }
-      else {
-        if (is_object($ret) && is_a($ret, 'Pheanstalk_Job')) {
-          $item = unserialize($ret->getData());
-          $item->id = $ret->getId();
-          $item->beanstalkd_job = $ret;
-          $ret = $item;
-        }
-      }
+
       return $ret;
     }
     else {
