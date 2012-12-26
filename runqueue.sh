@@ -145,7 +145,7 @@ function beanstalkd_execute($item) {
   $parts = parse_url($hostname);
   $php_exec = beanstalkd_get_php();
 
-  $cmd = $php_exec . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . realpath(getcwd()) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id . ' -c ' . $parts['host'] . ' -p ' . $parts['port'];
+  $cmd = escapeshellarg($php_exec) . ' ' . (in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe')) ? ' -r ' . $script_name : '') . ' -r ' . escapeshellarg(realpath(getcwd())) . ' -s ' . $_SERVER['HTTP_HOST'] . ' -x ' . $item->id . ' -c ' . $parts['host'] . ' -p ' . $parts['port'];
 
   if ($_verbose_mode) {
     $cmd .= ' -v';
