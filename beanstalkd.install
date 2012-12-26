@@ -13,7 +13,7 @@ function beanstalkd_requirements($phase) {
   $requirements = array();
 
   if ($phase == 'runtime') {
-    $path = beanstalkd_pheanstalk_get_path();
+    $path = libraries_get_path('pheanstalk');
     if (!$path) {
       $config = conf_path();
       $profile = variable_get('install_profile', 'default');

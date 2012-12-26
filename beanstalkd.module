@@ -37,54 +37,46 @@ function beanstalkd_permissions() {
   );
 }
 
-
 /**
- * Get Pheanstalk path
+ * Implements hook_libraries_info().
  */
-function beanstalkd_pheanstalk_get_path() {
-  static $path = NULL;
-
-  if (isset($path)) {
-    return $path;
-  }
-
-  $config = conf_path();
-  $profile = variable_get('install_profile', 'default');
-  $searchdir = array();
-
-  if (file_exists("profile/$profile/libraries")) {
-    $searchdir[] = "profile/$profile/libraries";
-  }
-
-  $searchdir[] = 'sites/all/libraries';
-
-  if (file_exists("$config/libraries")) {
-    $searchdir[] = "$config/libraries";
-  }
+function beanstalkd_libraries_info() {
+  $info = array();
   
-  $searchdir[] = drupal_get_path('module', 'beanstalkd');
+  $info['pheanstalk'] = array(
+    'name' => t('Pheanstalk'),
+    'vendor url' => 'https://github.com/pda/pheanstalk',
+    'download url' => 'https://github.com/pda/pheanstalk/tags',
+    'path' => 'classes',
+    'version' => 1.1, // There is no way of detecting the version, so the latest stable version is hardcoded. 
+    'files' => array(
+      'php' => array('Pheanstalk/ClassLoader.php'),
+    ),
+    'callbacks' => array(
+      'post-load' => array('beanstalkd_init_phpeanstalk'),
+    ),
+  );
+  
+  return $info;
+}
 
-  foreach ($searchdir as $dir) {
-    if (file_exists("$dir/pheanstalk/classes/Pheanstalk/ClassLoader.php")) {
-      $path = "$dir/pheanstalk";
-      return $path;
-    }
+function beanstalkd_init_phpeanstalk($library) {
+  if ($library['loaded']) {
+    Pheanstalk_ClassLoader::register(DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
   }
-
-  return FALSE;
 }
 
 /**
- * Load Pheanstalk
+ * Load the pheanstalk library.
  */
 function beanstalkd_load_pheanstalk() {
-  if (!class_exists('Pheanstalk_ClassLoader') && ($path = beanstalkd_pheanstalk_get_path())) {
-    include_once "$path/classes/Pheanstalk/ClassLoader.php";
-
-    Pheanstalk_ClassLoader::register("$path/classes");
+  $library = libraries_load('pheanstalk');
+  
+  if (!$library['loaded']) {
+    throw new Exception('Unable to load Pheanstalk library');
   }
-
-  return class_exists('Pheanstalk_ClassLoader');
+  
+  return TRUE;
 }
 
 /**

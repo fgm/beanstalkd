@@ -22,10 +22,10 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    */
   public function __construct($name, $force_connection = FALSE) {
     $this->tube = $name;
-    if (beanstalkd_load_pheanstalk()) {
-      $this->beanstalkd_params = beanstalkd_get_queue_options($name);
+    try {
+      if (beanstalkd_load_pheanstalk()) {
+        $this->beanstalkd_params = beanstalkd_get_queue_options($name);
 
-      try {
         $this->createConnection($this->beanstalkd_params['host'], $this->beanstalkd_params['port']);
         if ($name) {
           // If a queue name  is past then set this tube to be used and set it to be the 
@@ -43,15 +43,11 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
             ->stats();
         }
       }
-      catch (Exception $e) {
-        $this->beanstalkd_queue = FALSE;
-        $this->lastError = $e;
-        watchdog('beanstalk', '%message in %file on line %line.', array('%error' => $e->getCode(), '%message' => $e->getMessage(), '%file' => $e->getFile(), '%line' => $e->getLine()), WATCHDOG_ERROR);
-      }
     }
-    else {
-      $this->beanstalkd_params = array();
+    catch (Exception $e) {
       $this->beanstalkd_queue = FALSE;
+      $this->lastError = $e;
+      watchdog_exception('beanstalk', $e);
     }
   }
 
