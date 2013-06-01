@@ -6,7 +6,7 @@
 
 class BeanstalkdQueue implements DrupalReliableQueueInterface {
   /**
-   * 
+   *
    */
   protected $tube;
   /**
@@ -28,7 +28,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
 
         $this->createConnection($this->beanstalkd_params['host'], $this->beanstalkd_params['port']);
         if ($name) {
-          // If a queue name  is past then set this tube to be used and set it to be the 
+          // If a queue name  is past then set this tube to be used and set it to be the
           // only tube to be watched.
           $tube = $this->_tubeName($name);
           $this->beanstalkd_queue
@@ -37,7 +37,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
             ->ignore('default');
         }
         elseif ($force_connection) {
-          // be sure to establish the connection so that we can catch any 
+          // be sure to establish the connection so that we can catch any
           // errors
           $this->beanstalkd_queue
             ->stats();
@@ -58,7 +58,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     if (!$this->beanstalkd_queue) {
       return FALSE;
     }
-    
+
     if (method_exists($this->beanstalkd_queue, $name)) {
       $put_commands = array('put', 'putInTube');
       $tube_commands = array('watch', 'ignore', 'statsTube', 'pauseTube', 'useTube');
@@ -95,7 +95,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
 
           $record->name = $tube;
           $arguments[1] = serialize($record);
-          
+
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
@@ -107,7 +107,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $tube = $this->_tubeName($tube);
           $arguments[0] = $tube;
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
-        }        
+        }
       }
       // Commands: bury, delete, release, statsJob, touch
       elseif (in_array($name, $job_commands)) {
@@ -130,7 +130,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       else {
         $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
       }
-      
+
       foreach ($ret as $id => $object) {
         if (is_object($object) && is_a($object, 'Pheanstalk_Job')) {
           $item = unserialize($object->getData());
@@ -276,7 +276,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
     if (!$this->beanstalkd_queue) {
       return FALSE;
     }
-    
+
     return $this->release($item->beanstalkd_job, $this->beanstalkd_params['priority'], $this->beanstalkd_params['release_delay']) ? TRUE: FALSE;
   }
 
@@ -289,7 +289,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       $this->beanstalkd_queue = new Pheanstalk($host, $port);
     }
   }
-  
+
   public function getError() {
     if (isset($this->lastError)) {
       return $this->lastError;

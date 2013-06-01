@@ -42,7 +42,7 @@ function beanstalkd_permission() {
  */
 function beanstalkd_libraries_info() {
   $info = array();
-  
+
   $info['pheanstalk'] = array(
     'name' => t('Pheanstalk'),
     'vendor url' => 'https://github.com/pda/pheanstalk',
@@ -62,7 +62,7 @@ function beanstalkd_libraries_info() {
       'post-load' => array('beanstalkd_init_phpeanstalk'),
     ),
   );
-  
+
   return $info;
 }
 
@@ -106,11 +106,11 @@ function beanstalkd_init_phpeanstalk($library) {
  */
 function beanstalkd_load_pheanstalk() {
   $library = libraries_load('pheanstalk');
-  
+
   if (!$library['loaded']) {
     throw new Exception('Unable to load Pheanstalk library');
   }
-  
+
   return TRUE;
 }
 
@@ -156,7 +156,7 @@ function beanstalkd_get_queue_options($name) {
  */
 function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   static $queue_list;
-  
+
   if (!isset($queue_list)) {
     $queue_list = array();
     $cron_queues = module_invoke_all('cron_queue_info');
@@ -176,7 +176,7 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
       }
     }
   }
-  
+
   if ($queue_name) {
     $options = beanstalkd_get_queue_options($queue_name);
     $host = $options['host'] . ':' . $options['port'];
@@ -190,7 +190,7 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
 
 function beanstalkd_get_queues($hostname = NULL) {
   $queues = beanstalkd_get_host_queues($hostname);
-  
+
   if ($hostname) {
     $names = array_keys($queues);
   }
