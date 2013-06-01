@@ -25,9 +25,9 @@ function beanstalkd_menu() {
 
 
 /**
- * Implements hook_permissions()
+ * Implements hook_permission()
  */
-function beanstalkd_permissions() {
+function beanstalkd_permission() {
   return array(
     'access beanstalkd stats' => array(
       'title' => t('Access Beanstalkd Stats'),
