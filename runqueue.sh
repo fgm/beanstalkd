@@ -60,7 +60,8 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
       $process_count++;
       $queue_defaults = beanstalkd_get_queue_options($item->name);
       $process_function = ($allow_forking && $queue_defaults['fork']) ? 'beanstalkd_execute' : 'beanstalkd_process_item';
-      
+      $_SERVER['REQUEST_TIME'] = time();
+
       if ($process_function($item)) {
         beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
         
