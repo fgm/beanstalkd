@@ -45,6 +45,8 @@ $conf['beanstalk_queue_{queue name}'] = array(
   'reserve_timeout' => 0, // How long you should wait when reserving a job.
   'ttr' => 60, // Seconds a job can be reserved for
   'release_delay' => 0 // Seconds to delay a job
+  'forked_extra_timeout' => FALSE, // When forking the job runner, wait n time for more items on this queue.
+  'forked_extra_items' => FALSE, // When forking the job runner, process n items in addition on this queue.
   'priority' => 1024, // Sets the priority of the job
   'delay' => 0, // Set the default delay for a queue
 );
@@ -58,6 +60,8 @@ $conf['beanstalk_default_queue'] = array(
   'reserve_timeout' => 0, // How long you should wait when reserving a job.
   'ttr' => 60, // Seconds a job can be reserved for
   'release_delay' => 0 // Seconds to delay a job
+  'forked_extra_timeout' => FALSE, // When forking the job runner, wait n time for more items on this queue.
+  'forked_extra_items' => FALSE, // When forking the job runner, process n items in addition on this queue.
   'priority' => 1024, // Sets the priority of the job
   'delay' => 0, // Set the default delay for a queue
 );
