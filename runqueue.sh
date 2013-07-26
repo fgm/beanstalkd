@@ -17,7 +17,7 @@ function beanstalkd_get_php() {
     else {
       exec('which php', $output, $retval);
       if (!$retval) {
-        $php_exec = $output;
+        $php_exec = reset($output);
       }
     }
   }
