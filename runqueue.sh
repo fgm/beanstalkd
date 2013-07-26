@@ -168,7 +168,7 @@ function beanstalkd_shutdown() {
  * Drupal shell execution script
  */
 
-$script = basename(array_shift($_SERVER['argv']));
+$script = array_shift($_SERVER['argv']);
 $script_name = realpath($script);
 
 $shortopts = 'hr:s:vlx:c:p:q:';
