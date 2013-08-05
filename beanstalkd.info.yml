@@ -1,0 +1,8 @@
+name: Beanstalkd
+type: module
+description: Client for using the beanstalkd queue system to manage selected drupal queues
+core: 8.x
+php: 5.3
+
+dependencies:
+  - libraries
