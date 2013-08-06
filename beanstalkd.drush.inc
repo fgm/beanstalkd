@@ -134,7 +134,7 @@ function drush_beanstalkd_server_stats($host = NULL) {
     $info = reset($queues[$host]);
     $hostinfo = parse_url($host);
 
-    $queue = new BeanstalkdQueue(NULL);
+    $queue = new QueueBeanstalkd(NULL);
     $queue->createConnection($hostinfo['host'], $hostinfo['port']);
     
     $stats = $queue->stats();
@@ -210,7 +210,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
 
   if (isset($queues[$hostname])) {
     if ($item_id) {
-      $queue = new BeanstalkdQueue(NULL);
+      $queue = new QueueBeanstalkd(NULL);
       $queue->createConnection($host, $port);
 
       try {
@@ -268,7 +268,7 @@ function drush_beanstalkd_peek_items($type, $name) {
   $hostname = $host . ':' . $port;
 
   if (isset($queues[$hostname])) {
-    $queue = new BeanstalkdQueue(NULL);
+    $queue = new QueueBeanstalkd(NULL);
     $queue->createConnection($host, $port);
 
     $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
@@ -369,7 +369,7 @@ function drush_beanstalkd_kick($items = NULL) {
   $name = drush_get_option('queue', NULL);
 
   if (isset($queues[$hostname])) {
-    $queue = new BeanstalkdQueue(NULL);
+    $queue = new QueueBeanstalkd(NULL);
     $queue->createConnection($host, $port);
 
     $names = drupal_map_assoc(beanstalkd_get_queues($hostname));

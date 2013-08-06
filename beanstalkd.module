@@ -5,7 +5,7 @@
  * Provide core implementation of beanstalkd support for Queues
  */
 
-use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 
 /**
  * Implements hook_menu()
@@ -136,7 +136,7 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
     foreach ($queues as $queue => $settings) {
       $name = 'queue_class_' . $queue;
       $options = beanstalkd_get_queue_options($queue);
-      if (variable_get($name, variable_get('queue_default_class', 'SystemQueue')) == 'BeanstalkdQueue') {
+      if (variable_get($name, variable_get('queue_default_class', 'SystemQueue')) == 'QueueBeanstalkd') {
         $settings['options'] = $options;
         $queue_list[$options['host'] . ':' . $options['port']][$queue] = $settings;
       }

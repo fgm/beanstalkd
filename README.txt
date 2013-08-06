@@ -30,11 +30,11 @@ Installation
 
 If you want to set beanstalkd as the default queue manager then add the following to your settings.php
 
-$conf['queue_default_class'] = 'BeanstalkdQueue';
+$conf['queue_default_class'] = 'QueueBeanstalkd';
 
 Alternatively you can also set for each queue to use beanstalkd
 
-$conf['queue_class_{queue name}'] = 'BeanstalkdQueue';
+$conf['queue_class_{queue name}'] = 'QueueBeanstalkd';
 
 Lastly you can also set some beanstalkd defaults.
 

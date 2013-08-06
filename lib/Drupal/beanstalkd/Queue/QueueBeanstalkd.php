@@ -7,7 +7,7 @@ namespace Drupal\beanstalkd\Queue;
 
 use Drupal\Core\Queue\ReliableQueueInterface;
 
-class BeanstalkdQueue implements ReliableQueueInterface {
+class QueueBeanstalkd implements ReliableQueueInterface {
   /**
    *
    */

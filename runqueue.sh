@@ -336,7 +336,7 @@ foreach ($names as $name) {
   DrupalQueue::get($name)->createQueue();
 }
 
-$queue = new BeanstalkdQueue(NULL);
+$queue = new QueueBeanstalkd(NULL);
 
 if (empty($names)) {
   echo "Exiting: No queues available.\n";

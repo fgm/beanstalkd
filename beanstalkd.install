@@ -5,7 +5,7 @@
  * Installation requirements for beanstalkd
  */
 
-use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 
 /**
  * Implementation of hook_requirements
@@ -42,7 +42,7 @@ function beanstalkd_requirements($phase) {
     }
     
     try {
-      $queue = new BeanstalkdQueue(NULL, TRUE);
+      $queue = new QueueBeanstalkd(NULL, TRUE);
 
       $requirements['beanstalkd_queue_count'] = array(
         'title' => t('Beanstalkd Queue count'),

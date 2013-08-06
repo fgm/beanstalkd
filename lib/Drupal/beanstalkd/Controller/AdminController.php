@@ -8,7 +8,7 @@
 namespace Drupal\beanstalkd\Controller;
 
 use Drupal\Core\Controller\ControllerInterface;
-use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class AdminController implements ControllerInterface {
@@ -24,7 +24,7 @@ class AdminController implements ControllerInterface {
    * BeanstalkD Queue Stats Callback
    */
   public function adminStats() {
-    if ($queue = new BeanstalkdQueue(NULL, TRUE)) {
+    if ($queue = new QueueBeanstalkd(NULL, TRUE)) {
       // Generate an array of stats
 
       $stats = $queue->stats();
