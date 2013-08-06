@@ -1,0 +1,3 @@
+services:
+  queue.beanstalkd:
+    class: Drupal\beanstalkd\Queue\QueueBeanstalkdFactory
