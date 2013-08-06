@@ -1,10 +1,13 @@
 <?php
-
 /**
  * @file
  */
 
-class BeanstalkdQueue implements DrupalReliableQueueInterface {
+namespace Drupal\beanstalkd\Queue;
+
+use Drupal\Core\Queue\ReliableQueueInterface;
+
+class BeanstalkdQueue implements ReliableQueueInterface {
   /**
    *
    */
@@ -283,7 +286,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   public function createConnection($host, $port) {
     $library = libraries_detect('pheanstalk');
     if (version_compare($library['version'], '2.0.0', '>=')) {
-      $this->beanstalkd_queue = new Pheanstalk_Pheanstalk($host, $port);
+      $this->beanstalkd_queue = new \Pheanstalk_Pheanstalk($host, $port);
     }
     else {
       $this->beanstalkd_queue = new Pheanstalk($host, $port);
