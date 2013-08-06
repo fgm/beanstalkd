@@ -47,7 +47,6 @@ function beanstalkd_libraries_info() {
     'vendor url' => 'https://github.com/pda/pheanstalk',
     'download url' => 'https://github.com/pda/pheanstalk/tags',
     'path' => 'classes',
-    'version callback' => 'beanstalkd_get_version',
     'version arguments' => array(
       'file' => 'classes/Pheanstalk/Pheanstalk.php',
       'pattern' => '/VERSION\s+=\s+\'(\d+\.\d+\.\d+)\';/',
@@ -63,35 +62,6 @@ function beanstalkd_libraries_info() {
   );
 
   return $info;
-}
-
-function beanstalkd_get_version($library, $options) {
-  // Provide defaults.
-  $options += array(
-    'file' => '',
-    'pattern' => '',
-    'lines' => 20,
-    'cols' => 200,
-  );
-
-  $file = DRUPAL_ROOT . '/' . $library['library path'] . '/classes/Pheanstalk.php';
-  if (file_exists($file)) {
-    return '1.0';
-  }
-
-  $file = DRUPAL_ROOT . '/' . $library['library path'] . '/' . $options['file'];
-  if (empty($options['file']) || !file_exists($file)) {
-    return;
-  }
-  $file = fopen($file, 'r');
-  while ($options['lines'] && $line = fgets($file, $options['cols'])) {
-    if (preg_match($options['pattern'], $line, $version)) {
-      fclose($file);
-      return $version[1];
-    }
-    $options['lines']--;
-  }
-  fclose($file);
 }
 
 function beanstalkd_init_phpeanstalk($library) {
@@ -120,21 +90,18 @@ function beanstalkd_get_queue_options($name) {
   static $options = array();
 
   if (!isset($options[$name])) {
-    $library = libraries_detect('pheanstalk');
-    $class = version_compare($library['version'], '2.0.0', '>=') ? 'Pheanstalk_PheanstalkInterface' : 'Pheanstalk';
-
     $options[$name] = variable_get('beanstalk_queue_' . $name, array());
     $defaults = variable_get('beanstalk_default_queue', array()) + array(
       'host' => variable_get('beanstalkd_host', 'localhost'),
-      'port' => variable_get('beanstalkd_port', $class::DEFAULT_PORT),
+      'port' => variable_get('beanstalkd_port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT),
       'fork' => FALSE,
       'reserve_timeout' => 0,
-      'ttr' => $class::DEFAULT_TTR,
-      'priority' => $class::DEFAULT_PRIORITY,
-      'release_delay' => $class::DEFAULT_DELAY,
+      'ttr' => \Pheanstalk_PheanstalkInterface::DEFAULT_TTR,
+      'priority' => \Pheanstalk_PheanstalkInterface::DEFAULT_PRIORITY,
+      'release_delay' => \Pheanstalk_PheanstalkInterface::DEFAULT_DELAY,
       'forked_extra_timeout' => FALSE,
       'forked_extra_items' => FALSE,
-      'delay' => $class::DEFAULT_DELAY,
+      'delay' => \Pheanstalk_PheanstalkInterface::DEFAULT_DELAY,
     );
     $options[$name] += $defaults;
   }
