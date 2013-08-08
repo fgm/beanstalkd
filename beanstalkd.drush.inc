@@ -3,6 +3,7 @@
 /**
  * @file
  */
+use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 
 /**
  * Implementation of hook_drush_command().
@@ -113,7 +114,7 @@ function drush_beanstalkd_server_stats($host = NULL) {
   $queues = beanstalkd_get_host_queues();
   
   if ($host) {
-    $hostinfo = parse_url($host) + array('port' => Pheanstalk::DEFAULT_PORT);
+    $hostinfo = parse_url($host) + array('port' => \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
     if (!isset($hostinfo['host']) && isset($hostinfo['path'])) {
       $hostinfo['host'] = $hostinfo['path'];
       unset($hostinfo['path']);
@@ -177,7 +178,7 @@ function drush_beanstalkd_queue_stats($name = NULL) {
   }
   
   if ($name && isset($names[$name])) {
-    $queue = DrupalQueue::get($name);
+    $queue = new QueueBeanstalkd($name);
     $stats = $queue->statsTube($name);
     
     $rows = array();
@@ -203,7 +204,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+    $port = drush_get_option('port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
   }
   
   $hostname = $host . ':' . $port;
@@ -226,7 +227,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
 
         drush_print_table($rows);
       }
-      catch (Exception $e) {
+      catch (\Exception $e) {
         drush_log($e->getMessage(), 'error');
       }
     }
@@ -262,7 +263,7 @@ function drush_beanstalkd_peek_items($type, $name) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+    $port = drush_get_option('port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
   }
 
   $hostname = $host . ':' . $port;
@@ -313,7 +314,7 @@ function drush_beanstalkd_peek_items($type, $name) {
 
       drush_print_table($rows);
     }
-    catch (Exception $e) {
+    catch (\Exception $e) {
       drush_log($e->getMessage(), 'error');
     }
   }
@@ -335,7 +336,7 @@ function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
     $stats = $queue->statsTube($a);
     return $stats['current-jobs-' . $type] > 0 ? TRUE : FALSE;
   }
-  catch (Exception $e) {
+  catch (\Exception $e) {
     return FALSE;
   }
 }
@@ -361,7 +362,7 @@ function drush_beanstalkd_kick($items = NULL) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+    $port = drush_get_option('port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
   }
 
   $hostname = $host . ':' . $port;
