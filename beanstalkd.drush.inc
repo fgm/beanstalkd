@@ -175,11 +175,11 @@ function drush_beanstalkd_queue_stats($name = NULL) {
   if (!$name) {
     $name = drush_choice($names, 'Select a queue to query');
   }
-  
+
   if ($name && isset($names[$name])) {
-    $queue = DrupalQueue::get($name);
+    $queue = new BeanstalkdQueue($name);
     $stats = $queue->statsTube($name);
-    
+
     $rows = array();
     foreach ($stats as $key => $stat) {
       $rows[] = array(
