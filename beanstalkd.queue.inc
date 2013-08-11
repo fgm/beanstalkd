@@ -281,13 +281,9 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   }
 
   public function createConnection($host, $port) {
-    $library = libraries_detect('pheanstalk');
-    if (version_compare($library['version'], '2.0.0', '>=')) {
-      $this->beanstalkd_queue = new Pheanstalk_Pheanstalk($host, $port);
-    }
-    else {
-      $this->beanstalkd_queue = new Pheanstalk($host, $port);
-    }
+    $class_name = beanstalkd_get_classname();
+
+    $this->beanstalkd_queue = new $class_name($host, $port);
   }
 
   public function getError() {

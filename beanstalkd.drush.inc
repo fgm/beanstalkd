@@ -33,7 +33,7 @@ function beanstalkd_drush_command() {
     'arguments' => array(
       'queue' => 'specify the name of the queue',
     ),
-    'aliases' => array('queue-stats'), 
+    'aliases' => array('queue-stats'),
   );
   $items['beanstalkd-item-stats'] = array(
     'callback' => 'drush_beanstalkd_item_stats',
@@ -110,17 +110,18 @@ function drush_beanstalkd_servers() {
 
 function drush_beanstalkd_server_stats($host = NULL) {
   beanstalkd_load_pheanstalk();
+  $class_name = beanstalkd_get_interface();
   $queues = beanstalkd_get_host_queues();
-  
+
   if ($host) {
-    $hostinfo = parse_url($host) + array('port' => Pheanstalk::DEFAULT_PORT);
+    $hostinfo = parse_url($host) + array('port' => $class_name::DEFAULT_PORT);
     if (!isset($hostinfo['host']) && isset($hostinfo['path'])) {
       $hostinfo['host'] = $hostinfo['path'];
       unset($hostinfo['path']);
-    } 
+    }
     $host = $hostinfo['host'] . ':' . $hostinfo['port'];
   }
-  
+
   if (count($queues) > 1) {
     $options = drupal_map_assoc(array_keys($queues));
     $host = drush_choice($options, 'Select a host to query');
@@ -194,8 +195,9 @@ function drush_beanstalkd_queue_stats($name = NULL) {
 
 function drush_beanstalkd_item_stats($item_id = NULL) {
   beanstalkd_load_pheanstalk();
+  $class_name = beanstalkd_get_interface();
   $queues = beanstalkd_get_host_queues();
-  
+
   if ($name = drush_get_option('queue', NULL)) {
     $info = beanstalkd_get_host_queues(NULL, $name);
     $host = $info['options']['host'];
@@ -203,9 +205,9 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+    $port = drush_get_option('port', $class_name::DEFAULT_PORT);
   }
-  
+
   $hostname = $host . ':' . $port;
 
   if (isset($queues[$hostname])) {
@@ -253,8 +255,9 @@ function drush_beanstalkd_peek_delayed($name = NULL) {
 
 function drush_beanstalkd_peek_items($type, $name) {
   beanstalkd_load_pheanstalk();
+  $class_name = beanstalkd_get_interface();
   $queues = beanstalkd_get_host_queues();
-  
+
   if ($name = drush_get_option('queue', NULL)) {
     $info = beanstalkd_get_host_queues(NULL, $name);
     $host = $info['options']['host'];
@@ -262,7 +265,7 @@ function drush_beanstalkd_peek_items($type, $name) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+    $port = drush_get_option('port', $class_name::DEFAULT_PORT);
   }
 
   $hostname = $host . ':' . $port;
@@ -341,6 +344,8 @@ function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
 }
 
 function drush_beanstalkd_kick($items = NULL) {
+  $class_name = beanstalkd_get_interface();
+
   if (!is_numeric($items)) {
     drush_log(dt('@items is not a numeric value', array('@items' => $items)), 'error');
     return;
@@ -361,11 +366,11 @@ function drush_beanstalkd_kick($items = NULL) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', Pheanstalk::DEFAULT_PORT);
+    $port = drush_get_option('port', $class_name::DEFAULT_PORT);
   }
 
   $hostname = $host . ':' . $port;
-  
+
   $name = drush_get_option('queue', NULL);
 
   if (isset($queues[$hostname])) {

@@ -203,3 +203,23 @@ function beanstalkd_get_queues($hostname = NULL) {
 
   return $names;
 }
+
+function beanstalkd_get_classname() {
+  $library = libraries_detect('pheanstalk');
+  if (version_compare($library['version'], '2.0.0', '>=')) {
+    return 'Pheanstalk_Pheanstalk';
+  }
+  else {
+    return 'Pheanstalk';
+  }
+}
+
+function beanstalkd_get_interface() {
+  $library = libraries_detect('pheanstalk');
+  if (version_compare($library['version'], '2.0.0', '>=')) {
+    return 'Pheanstalk_PheanstalkInterface';
+  }
+  else {
+    return 'Pheanstalk';
+  }
+}
