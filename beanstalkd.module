@@ -129,9 +129,9 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
     $queues = array_merge($queues, $cron_queues);
 
     foreach ($queues as $queue => $settings) {
-      $name = 'queue_class_' . $queue;
+      $name = 'queue_service_' . $queue;
       $options = beanstalkd_get_queue_options($queue);
-      if (variable_get($name, variable_get('queue_default_class', 'SystemQueue')) == 'QueueBeanstalkd') {
+      if (settings()->get($name, settings()->get('queue_default', 'queue.system')) == 'queue.beanstalkd') {
         $settings['options'] = $options;
         $queue_list[$options['host'] . ':' . $options['port']][$queue] = $settings;
       }
