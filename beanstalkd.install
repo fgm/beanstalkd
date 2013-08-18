@@ -17,7 +17,7 @@ function beanstalkd_requirements($phase) {
     $library = libraries_detect('pheanstalk');
     if (!$library['installed']) {
       $config = conf_path();
-      $profile = variable_get('install_profile', 'default');
+      $profile = settings()->get('install_profile', 'default');
       $searchdir = array(
         "profile/$profile/libraries",
         'sites/all/libraries',

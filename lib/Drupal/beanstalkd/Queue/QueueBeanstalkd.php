@@ -294,6 +294,6 @@ class QueueBeanstalkd implements ReliableQueueInterface {
   }
 
   private function _tubeName($name) {
-    return variable_get('beanstalkd_prefix', '') . $name;
+    return settings()->get('beanstalkd_prefix', '') . $name;
   }
 }

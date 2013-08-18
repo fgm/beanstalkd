@@ -85,10 +85,10 @@ function beanstalkd_get_queue_options($name) {
   static $options = array();
 
   if (!isset($options[$name])) {
-    $options[$name] = variable_get('beanstalk_queue_' . $name, array());
-    $defaults = variable_get('beanstalk_default_queue', array()) + array(
-      'host' => variable_get('beanstalkd_host', 'localhost'),
-      'port' => variable_get('beanstalkd_port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT),
+    $options[$name] = settings()->get('beanstalk_queue_' . $name, array());
+    $defaults = settings()->get('beanstalk_default_queue', array()) + array(
+      'host' => settings()->get('beanstalkd_host', 'localhost'),
+      'port' => settings()->get('beanstalkd_port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT),
       'fork' => FALSE,
       'reserve_timeout' => 0,
       'ttr' => \Pheanstalk_PheanstalkInterface::DEFAULT_TTR,

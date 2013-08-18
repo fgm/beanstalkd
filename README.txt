@@ -15,6 +15,7 @@ Requirements
 1. profile/{profile}/libraries
 2. sites/all/libraries
 3. sites/{config}/libraries
+4. libraries
 
 Use the following command in one of the above directories.
 
@@ -30,15 +31,15 @@ Installation
 
 If you want to set beanstalkd as the default queue manager then add the following to your settings.php
 
-$conf['queue_default_class'] = 'QueueBeanstalkd';
+$settings['queue_default'] = 'queue.beanstalkd';
 
 Alternatively you can also set for each queue to use beanstalkd
 
-$conf['queue_class_{queue name}'] = 'QueueBeanstalkd';
+$settings['queue_class_{queue name}'] = 'QueueBeanstalkd';
 
 Lastly you can also set some beanstalkd defaults.
 
-$conf['beanstalk_queue_{queue name}'] = array(
+$settings['beanstalk_queue_{queue name}'] = array(
   'host' => 'localhost', // Name of the host where beanstalkd is installed.
   'port' => '11300', // Port which beanstalkd is listening to.
   'fork' => FALSE, // Used in runqueue.sh to know if it should run the job in another process.
@@ -53,7 +54,7 @@ $conf['beanstalk_queue_{queue name}'] = array(
 
 Overall queue defaults can be set like so.
 
-$conf['beanstalk_default_queue'] = array(
+$settings['beanstalk_default_queue'] = array(
   'host' => 'localhost', // Name of the host where beanstalkd is installed.
   'port' => '11300', // Port which beanstalkd is listening to.
   'fork' => FALSE, // Used in runqueue.sh to know if it should run the job in another process.
