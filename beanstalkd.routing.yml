@@ -1,5 +1,5 @@
 beanstalkd_admin:
-  pattern: 'admin/reports/beanstalkd'
+  pattern: '/admin/reports/beanstalkd'
   defaults:
     _content: Drupal\beanstalkd\Controller\AdminController::adminStats
   requirements:
