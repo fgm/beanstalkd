@@ -26,7 +26,6 @@ function beanstalkd_drush_command() {
   $items['beanstalkd-queue-list'] = array(
     'callback' => 'drush_beanstalkd_queue_list',
     'description' => 'Print a list of all Beanstalkd queues',
-    'aliases' => array('queue-list'),
   );
   $items['beanstalkd-queue-stats'] = array(
     'callback' => 'drush_beanstalkd_queue_stats',
