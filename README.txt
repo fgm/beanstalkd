@@ -113,3 +113,18 @@ of your Drupal installation with
   ./runqueue.sh
 
 Running this will process any messages on any Beanstalkd queue.
+
+Using Supervisord
+-----------------
+
+Since PHP is not designed to run as a deamon process, long running PHP scripts will generally consume more and more memory. All care has been taken to avoid this as much as possible, but any code which has not been written to be a part of beanstalkd will generally not cope with running for too long. With good set up practices and configuration the runqueue.sh script will run for a very long time even when using extremely memory hungry processes such as the grammar parser in the API module. So as a backup it is advised that you run this process using the supervisord module which will monitor runqueue.sh and make sure that if it does exit it will be restarted.
+
+Here is an example configuration for supervisord.
+
+---8<---
+command=/usr/bin/php sites/all/modules/contrib/beanstalkd/runqueue.sh -s http://example.com/
+autorestart=true
+user=www-data
+directory=/var/www
+---8<---
+
