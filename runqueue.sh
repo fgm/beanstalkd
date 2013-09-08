@@ -21,7 +21,11 @@ function beanstalkd_get_php() {
       }
     }
   }
-  
+
+  if (!in_array(basename($php_exec), array('php', 'PHP.EXE', 'php.exe'))) {
+    $php_exec = realpath($php_exec);
+  }
+
   return $php_exec;
 }
 
