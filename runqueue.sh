@@ -308,7 +308,9 @@ if (isset($args['p']) || isset($args['port'])) {
   $conf['beanstalkd_port'] = isset($args['p']) ? $args['p'] : $args['port'];
 }
 
-$hostname = variable_get('beanstalkd_host', 'localhost') . ':' . variable_get('beanstalkd_port', Pheanstalk::DEFAULT_PORT);
+$interface = beanstalkd_get_interface();
+
+$hostname = variable_get('beanstalkd_host', 'localhost') . ':' . variable_get('beanstalkd_port', $interface::DEFAULT_PORT);
 $names = beanstalkd_get_queues($hostname);
 
 if (isset($args['l']) || isset($args['list'])) {
