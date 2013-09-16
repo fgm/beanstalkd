@@ -54,15 +54,20 @@ function beanstalkd_libraries_info() {
       'cols' => 255,
     ),
     'files' => array(
-      'php' => array(
-        'Pheanstalk/PheanstalkInterface.php' => array(
-          'namespace' => 'Pheanstalk',
-        ),
-      ),
+      'php' => array('Pheanstalk/ClassLoader.php'),
+    ),
+    'callbacks' => array(
+      'post-load' => array('beanstalkd_init_phpeanstalk'),
     ),
   );
 
   return $info;
+}
+
+function beanstalkd_init_phpeanstalk($library) {
+  if ($library['loaded']) {
+    Pheanstalk_ClassLoader::register(DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
+  }
 }
 
 /**
