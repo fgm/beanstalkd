@@ -10,8 +10,9 @@ namespace Drupal\beanstalkd\Controller;
 use Drupal\Core\Controller\ControllerInterface;
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 
-class AdminController implements ControllerInterface {
+class AdminController implements ContainerInjectionInterface {
 
   /**
    * Injects BookManager Service.
