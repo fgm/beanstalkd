@@ -82,7 +82,7 @@ class QueueBeanstalkd implements ReliableQueueInterface {
         $tubes = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
 
         // Now rebuild argument 1 (which should be $data) into a serialized object
-        $record = new stdClass();
+        $record = new \stdClass();
         $record->data = $arguments[1];
 
         // Now overlay some default parameters
