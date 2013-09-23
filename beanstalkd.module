@@ -66,8 +66,7 @@ function beanstalkd_libraries_info() {
 
 function beanstalkd_init_phpeanstalk($library) {
   if ($library['loaded']) {
-    $loader = drupal_classloader();
-    $loader->add('Pheanstalk', DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
+    drupal_classloader()->add('Pheanstalk', DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
   }
 }
 
