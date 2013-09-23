@@ -1,4 +1,4 @@
-beanstalkd_admin:
+beanstalkd.admin:
   path: '/admin/reports/beanstalkd'
   defaults:
     _content: Drupal\beanstalkd\Controller\AdminController::adminStats
