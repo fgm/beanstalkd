@@ -16,7 +16,7 @@ function beanstalkd_menu() {
   $items['admin/reports/beanstalkd'] = array(
     'title' => 'Beanstalkd Stats',
     'description' => 'Retreives statistics from the beanstalkd server.',
-    'route_name' => 'beanstalkd_admin',
+    'route_name' => 'beanstalkd.admin',
   );
 
   return $items;
