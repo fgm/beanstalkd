@@ -148,7 +148,7 @@ function drush_beanstalkd_server_stats($host = NULL) {
     $stats = $queue->stats();
 
     $rows = array();
-    foreach ($stats as $key => $stat) {
+    foreach (reset($stats) as $key => $stat) {
       $rows[] = array(
         drupal_ucfirst(str_replace('-', ' ', $key)),
         $stat,
@@ -195,7 +195,7 @@ function drush_beanstalkd_queue_stats($name = NULL) {
     $stats = $queue->statsTube($name);
 
     $rows = array();
-    foreach ($stats as $key => $stat) {
+    foreach (reset($stats) as $key => $stat) {
       $rows[] = array(
         drupal_ucfirst(str_replace('-', ' ', $key)),
         $stat,
