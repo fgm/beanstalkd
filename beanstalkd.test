@@ -10,6 +10,9 @@
  * Test the basic queue functionality.
  */
 class BeanstalkdTestCase extends DrupalWebTestCase {
+  /**
+   * {@inheritdoc}
+   */
   public static function getInfo() {
     return array(
       'name' => 'Beanstalkd Queue',
@@ -18,6 +21,9 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
     );
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setUp() {
     parent::setUp('beanstalkd');
   }
@@ -27,8 +33,7 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
    */
   function testQueue() {
     // Create two queues.
-
-    // Set random queues to use beanstalkd
+    // Set random queues to use beanstalkd.
     $name1 = $this->randomName();
     $name2 = $this->randomName();
     variable_set('queue_class_' . $name1, 'BeanstalkdQueue');
@@ -95,7 +100,7 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
   /**
    * This function returns the number of equal items in two arrays.
    */
-  function queueScore($items, $new_items) {
+  public function queueScore($items, $new_items) {
     $score = 0;
     foreach ($items as $item) {
       foreach ($new_items as $new_item) {

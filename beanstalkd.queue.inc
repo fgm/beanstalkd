@@ -2,12 +2,10 @@
 
 /**
  * @file
+ * Implements the Beanstalkd Queue class.
  */
 
 class BeanstalkdQueue implements DrupalReliableQueueInterface {
-  /**
-   *
-   */
   protected $tube;
   /**
    * The pheanstalk object which connects to the beanstalkd server.
@@ -17,7 +15,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   /**
    * Start working with a queue.
    *
-   * @param $name
+   * @param string $name
    *   Arbitrary string. The name of the queue to work with.
    */
   public function __construct($name, $force_connection = FALSE) {
@@ -37,8 +35,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
             ->ignore('default');
         }
         elseif ($force_connection) {
-          // be sure to establish the connection so that we can catch any
-          // errors
+          // Be sure to establish the connection so that we can catch any errors.
           $this->beanstalkd_queue
             ->stats();
         }
@@ -52,9 +49,9 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   }
 
   /**
-   * Use Method Overloading to allow unknown methods to be past to Pheanstalk object
+   * Use Method Overloading to allow unknown methods to be passed to Pheanstalk.
    */
-  function __call($name, $arguments) {
+  public function __call($name, $arguments) {
     if (!$this->beanstalkd_queue) {
       return FALSE;
     }
@@ -67,22 +64,22 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
 
       $ret = array();
 
-      // Commands: put, putInTube
+      // Commands: put, putInTube.
       if (in_array($name, $put_commands)) {
-        // If we're putting - shift the current tube name into the front of the arguments
+        // If we're putting - shift the current tube name into the front of the arguments.
         if ($name == 'put') {
           array_unshift($arguments, array($this->tube));
           $name = 'putInTube';
         }
 
-        // Force the tubes into an array
+        // Force the tubes into an array.
         $tubes = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
 
-        // Now rebuild argument 1 (which should be $data) into a serialized object
+        // Now rebuild argument 1 (which should be $data) into a serialized object.
         $record = new stdClass();
         $record->data = $arguments[1];
 
-        // Now overlay some default parameters
+        // Now overlay some default parameters.
         $arguments += array(
           2 => $this->beanstalkd_params['priority'],
           3 => $this->beanstalkd_params['delay'],
@@ -99,7 +96,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
-      // Commands: watch, ignore, statsTube, pauseTube, useTube
+      // Commands: watch, ignore, statsTube, pauseTube, useTube.
       elseif (in_array($name, $tube_commands)) {
         $tubes = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
 
@@ -109,7 +106,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
-      // Commands: bury, delete, release, statsJob, touch
+      // Commands: bury, delete, release, statsJob, touch.
       elseif (in_array($name, $job_commands)) {
         $items = is_array($arguments[0]) ? $arguments[0] : array($arguments[0]);
 
@@ -118,7 +115,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
-      // Commands: peek
+      // Commands: peek.
       elseif (in_array($name, $job_id_commands) && is_array($arguments[0])) {
         $ids = $arguments[0];
         foreach ($ids as $id) {
@@ -126,7 +123,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
           $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
         }
       }
-      // Else all other commands
+      // Else all other commands.
       else {
         $ret[] = call_user_func_array(array($this->beanstalkd_queue, $name), $arguments);
       }
@@ -143,16 +140,17 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return $ret;
     }
     else {
-      throw new Exception(t('Method doesn\'t exist'));
+      throw new Exception(t("Method doesn't exist"));
     }
   }
 
   /**
    * Add a queue item and store it directly to the queue.
    *
-   * @param $data
+   * @param mixed $data
    *   Arbitrary data to be associated with the new task in the queue.
-   * @return
+   *
+   * @return bool
    *   TRUE if the item was successfully created and was (best effort) added
    *   to the queue, otherwise FALSE. We don't guarantee the item was
    *   committed to disk, that your disk wasn't hit by a meteor, etc, but as
@@ -163,7 +161,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       return FALSE;
     }
 
-    return (bool)$this->put($data);
+    return (bool) $this->put($data);
   }
 
   /**
@@ -177,7 +175,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    * result might only be valid for a fraction of a second and not provide an
    * accurate representation.
    *
-   * @return
+   * @return int
    *   An integer estimate of the number of items in the queue.
    */
   public function numberOfItems() {
@@ -198,7 +196,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   /**
    * Claim an item in the queue for processing.
    *
-   * @param $lease_time
+   * @param int $lease_time
    *   How long the processing is expected to take in seconds, defaults to an
    *   hour. After this lease expires, the item will be reset and another
    *   consumer can claim the item. For idempotent tasks (which can be run
@@ -207,7 +205,8 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    *   run more than once (non-idempotent), a larger lease time will make it
    *   more rare for a given task to run multiple times in cases of failure,
    *   at the cost of higher latency.
-   * @return
+   *
+   * @return object|FALSE
    *   On success we return an item object. If the queue is unable to claim an
    *   item it returns false. This implies a best effort to retrieve an item
    *   and either the queue is empty or there is some other non-recoverable
@@ -220,7 +219,9 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
 
     $jobs = $this->reserve(0);
     if (!empty($jobs)) {
-      // We should only ever get one job, but if we have somehow reserved more than 1, the additional jobs will timeout and get put back onto the list. So it shouldn't get lost.
+      // We should only ever get one job, but if we have somehow reserved more
+      // than 1, the additional jobs will timeout and get put back onto the
+      // list. So it shouldn't get lost.
       return reset($jobs);
     }
     return FALSE;
@@ -229,7 +230,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   /**
    * Delete a finished item from the queue.
    *
-   * @param $item
+   * @param object $item
    *   The item returned by DrupalQueueInterface::claimItem().
    */
   public function deleteItem($item) {
@@ -257,41 +258,51 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
 
   /**
    * Delete a finished item from the queue.
-   *
-   * @param $item
-   *   The item returned by DrupalQueueInterface::claimItem().
    */
   public function deleteQueue() {
 
   }
 
   /**
-   * Release an item that the worker could not process, so another
-   * worker can come in and process it before the timeout expires.
+   * Release an item that the worker could not process.
    *
-   * @param $item
-   * @return boolean
+   * So another worker can come in and process it before the timeout expires.
+   *
+   * @param object $item
+   *   The queue item.
+   *
+   * @return bool
+   *   Whether the item was released.
    */
   public function releaseItem($item) {
     if (!$this->beanstalkd_queue) {
       return FALSE;
     }
 
-    return $this->release($item->beanstalkd_job, $this->beanstalkd_params['priority'], $this->beanstalkd_params['release_delay']) ? TRUE: FALSE;
+    return $this->release($item->beanstalkd_job, $this->beanstalkd_params['priority'], $this->beanstalkd_params['release_delay']) ? TRUE : FALSE;
   }
 
+  /**
+   * Create connection to a queue.
+   */
   public function createConnection($host, $port) {
     $class_name = beanstalkd_get_classname();
 
     $this->beanstalkd_queue = new $class_name($host, $port);
   }
 
+  /**
+   * Get last error.
+   */
   public function getError() {
     if (isset($this->lastError)) {
       return $this->lastError;
     }
   }
 
+  /**
+   * Return tube name.
+   */
   private function _tubeName($name) {
     return variable_get('beanstalkd_prefix', '') . $name;
   }

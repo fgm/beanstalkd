@@ -5,9 +5,8 @@
  * Provide core implementation of beanstalkd support for Queues
  */
 
-
 /**
- * Implements hook_menu()
+ * Implements hook_menu().
  */
 function beanstalkd_menu() {
   $items = array();
@@ -25,7 +24,7 @@ function beanstalkd_menu() {
 
 
 /**
- * Implements hook_permission()
+ * Implements hook_permission().
  */
 function beanstalkd_permission() {
   return array(
@@ -66,6 +65,9 @@ function beanstalkd_libraries_info() {
   return $info;
 }
 
+/**
+ * Get Pheanstalk version.
+ */
 function beanstalkd_get_version($library, $options) {
   // Provide defaults.
   $options += array(
@@ -95,6 +97,9 @@ function beanstalkd_get_version($library, $options) {
   fclose($file);
 }
 
+/**
+ * Init Pheanstalk library.
+ */
 function beanstalkd_init_phpeanstalk($library) {
   if ($library['loaded']) {
     Pheanstalk_ClassLoader::register(DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
@@ -115,7 +120,7 @@ function beanstalkd_load_pheanstalk() {
 }
 
 /**
- * Get Queue Parameters
+ * Get Queue Parameters.
  */
 function beanstalkd_get_queue_options($name) {
   static $options = array();
@@ -146,13 +151,13 @@ function beanstalkd_get_queue_options($name) {
 /**
  * Get a list of all queues which have drush enabled.
  *
- * @param $host
- *  The list of all the queue which are using this specified host
+ * @param string $host
+ *   The list of all the queue which are using this specified host
  *
- * @return
- *  If a host is specified then it returns an array of all the settings for the queue.
- *  otherwise if no host is specified then it will return an array keyed by host for all
- *  with the settings for all queues.
+ * @return array
+ *   If a host is specified then it returns an array of all the settings for the queue.
+ *   otherwise if no host is specified then it will return an array keyed by host for all
+ *   with the settings for all queues.
  */
 function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   static $queue_list;
@@ -188,6 +193,9 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   return $queue_list;
 }
 
+/**
+ * Get beanstalkd queues.
+ */
 function beanstalkd_get_queues($hostname = NULL) {
   $queues = beanstalkd_get_host_queues($hostname);
 
@@ -204,6 +212,9 @@ function beanstalkd_get_queues($hostname = NULL) {
   return $names;
 }
 
+/**
+ * Get Pheanstalk class name.
+ */
 function beanstalkd_get_classname() {
   $library = libraries_detect('pheanstalk');
   if (version_compare($library['version'], '2.0.0', '>=')) {
@@ -214,6 +225,9 @@ function beanstalkd_get_classname() {
   }
 }
 
+/**
+ * Get Pheanstalk interface.
+ */
 function beanstalkd_get_interface() {
   $library = libraries_detect('pheanstalk');
   if (version_compare($library['version'], '2.0.0', '>=')) {

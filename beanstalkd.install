@@ -2,11 +2,11 @@
 
 /**
  * @file
- * Installation requirements for beanstalkd
+ * Installation requirements for beanstalkd.
  */
 
 /**
- * Implementation of hook_requirements
+ * Implements hook_requirements().
  */
 function beanstalkd_requirements($phase) {
   $t = get_t();
@@ -40,7 +40,7 @@ function beanstalkd_requirements($phase) {
         'severity' => REQUIREMENT_INFO,
       );
     }
-    
+
     try {
       $queue = new BeanstalkdQueue(NULL, TRUE);
 
@@ -54,7 +54,12 @@ function beanstalkd_requirements($phase) {
       if ($e = $queue->getError()) {
         $requirements['beanstalkd_last_error'] = array(
           'title' => $t('Beanstalkd Queue count error'),
-          'value' => $t('%message in %file on line %line.', array('%error' => $e->getCode(), '%message' => $e->getMessage(), '%file' => $e->getFile(), '%line' => $e->getLine())),
+          'value' => $t('%message in %file on line %line.', array(
+            '%error' => $e->getCode(),
+            '%message' => $e->getMessage(),
+            '%file' => $e->getFile(),
+            '%line' => $e->getLine(),
+          )),
           'severity' => REQUIREMENT_ERROR,
           'description' => $t('An error has occurred while getting the current number of in the queue.'),
         );

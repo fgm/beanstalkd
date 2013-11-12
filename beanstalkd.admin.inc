@@ -2,20 +2,19 @@
 
 /**
  * @file
- * Provides any admin-specific functionality
+ * Provides any admin-specific functionality.
  */
 
 /**
- * BeanstalkD Queue Stats Callback
+ * BeanstalkD Queue Stats Callback.
  */
 function beanstalkd_admin_stats() {
   if ($queue = new BeanstalkdQueue(NULL, TRUE)) {
-    // Generate an array of stats
-	
+    // Generate an array of stats.
     $stats = $queue->stats();
-	$stats = reset($stats)->getArrayCopy();
+    $stats = reset($stats)->getArrayCopy();
 
-    // Define the base variables for theme_table
+    // Define the base variables for theme_table.
     $variables = array(
       'header' => array(
         array('data' => t('Property')),
@@ -24,30 +23,30 @@ function beanstalkd_admin_stats() {
       'rows' => array(),
     );
 
-    // Loop over each stat result and build it into the $variables['rows'] array
+    // Loop over each stat result and build it into the $variables['rows'] array.
     foreach ($stats as $key => $value) {
       // For safety, clean the key
       $key = check_plain($key);
 
-      // Depending on the key, format the value as appropriate
+      // Depending on the key, format the value as appropriate.
       switch ($key) {
-        // Format 'interval' keys
-        case 'uptime' :
+        // Format 'interval' keys.
+        case 'uptime':
           $value = format_interval($value);
           break;
 
-        // Format 'data size' keys
-        case 'binlog-max-size' :
-        case 'max-job-size' :
+        // Format 'data size' keys.
+        case 'binlog-max-size':
+        case 'max-job-size':
           $value = format_size($value);
           break;
 
-        // Default to a clean value
-        default :
+        // Default to a clean value.
+        default:
           $value = check_plain($value);
       }
 
-      // Add the the rows
+      // Add the the rows.
       $variables['rows'][] = array(
         'data' => array(
           array('data' => $key),
@@ -56,7 +55,7 @@ function beanstalkd_admin_stats() {
       );
     }
 
-    // Return a themed table of data
+    // Return a themed table of data.
     return theme('table', $variables);
   }
   else {

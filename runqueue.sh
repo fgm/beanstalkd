@@ -2,11 +2,11 @@
 <?php
 
 /**
- *
+ * Get PHP executable.
  */
 function beanstalkd_get_php() {
   static $php_exec;
-  
+
   if (!isset($php_exec)) {
     if (isset($_ENV['_'])) {
       $php_exec = $_ENV['_'];
@@ -29,6 +29,9 @@ function beanstalkd_get_php() {
   return $php_exec;
 }
 
+/**
+ * Log a message.
+ */
 function beanstalkd_log($string, $noeol = FALSE) {
   global $_verbose_mode;
 
@@ -39,16 +42,19 @@ function beanstalkd_log($string, $noeol = FALSE) {
   echo format_date(time(), 'custom', 'd M Y H:i:s') . "\t" . $string . ($noeol ? '' : "\n");
 }
 
+/**
+ * Main loop to process items.
+ */
 function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $process_items = FALSE) {
   global $queue, $start_memory;
-  
+
   $start_time = time();
   $process_count = 0;
 
   while (1) {
     $items = $queue->reserve(0);
     $item = reset($items);
-    
+
     if (!$item) {
       if ($process_time === FALSE && $process_items === FALSE) {
         beanstalkd_log(t("Waiting for next item to be claimed"));
@@ -68,7 +74,7 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
 
       if ($process_function($item)) {
         beanstalkd_log(t('Deleting job @id', array('@id' => $item->id)));
-        
+
         // This should never happen but sometimes it does.
         try {
           $queue->delete($item);
@@ -91,7 +97,7 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
     drupal_get_messages(); // Clear out the messages so they don't take up memory
     drupal_static_reset(NULL);
     beanstalkd_log(t('Total Memory Used: @memory, @bootstrap since bootstrap', array('@memory' => format_size(memory_get_usage()), '@bootstrap' => format_size(memory_get_usage() - $start_memory))));
-    
+
     // Check to see if the limits have been exceeded and return.
     if ($process_time && $start_time+$process_time < time()) {
       beanstalkd_log(t('Processing time limit of @seconds seconds exceeded.', array('@seconds' => $process_time)));
@@ -104,6 +110,9 @@ function beanstalkd_process($allow_forking = TRUE, $process_time = FALSE, $proce
   }
 }
 
+/**
+ * Process one item.
+ */
 function beanstalkd_process_item($item) {
   global $queue;
 
@@ -123,12 +132,12 @@ function beanstalkd_process_item($item) {
       $function($item->data);
       $timer = timer_read('beanstalkd_process_item');
       ini_set('display_errors', 1);
-      
+
       watchdog('beanstalkd', 'Processed job @id for queue @name taking @timerms<br />@description',  array('@id' => $item->id, '@name' => $item->name, '@timer' => $timer, '@description' => (isset($info['description callback']) && function_exists($info['description callback']) ? $info['description callback']($item->data) : '')), WATCHDOG_NOTICE);
 
       return TRUE;
     }
-    catch (Exception $e) {            
+    catch (Exception $e) {
       beanstalkd_log(t("Exception caught: @message in @file on line @line.\n@trace", array('@message' => $e->getMessage(), '@file' => $e->getFile(), '@line' => $e->getLine(), '@trace' => $e->getTraceAsString())));
       watchdog('beanstalkd', 'Job @id - @name: Exception caught: @message in @file on line @line.<br/><pre>@trace</pre>', array('@id' => $item->id, '@name' => $item->name, '@message' => $e->getMessage(), '@file' => $e->getFile(), '@line' => $e->getLine(), '@trace' => $e->getTraceAsString()), WATCHDOG_ERROR);
       $stats = $queue->statsJob($item);
@@ -144,6 +153,9 @@ function beanstalkd_process_item($item) {
   }
 }
 
+/**
+ * Main executable.
+ */
 function beanstalkd_execute($item) {
   global $args, $script_name, $_verbose_mode, $hostname;
 
@@ -164,6 +176,9 @@ function beanstalkd_execute($item) {
   return $retval == 0;
 }
 
+/**
+ * Log shutdown.
+ */
 function beanstalkd_shutdown() {
   beanstalkd_log('Shutdown complete.');
 }
@@ -186,7 +201,7 @@ if (isset($args['h']) || isset($args['help'])) {
 Beanstalkd Queue manager.
 
 Usage:        {$script} [OPTIONS]
-Example:      {$script} 
+Example:      {$script}
 
 All arguments are long options.
 
@@ -206,7 +221,7 @@ All arguments are long options.
   -c, --host  Specify host of the beanstalkd server.
 
   -p, --port  Specify port of the beanstalkd server.
-  
+
   -q , --queue Specify a comma specated list of queues to watch.
 
   -v, --verbose This option displays the options as they are set, but will
@@ -325,10 +340,10 @@ if (isset($args['l']) || isset($args['list'])) {
 
 if (isset($args['q']) || isset($args['queue'])) {
   $filter_queues = explode(',', (isset($args['q']) ? $args['q'] : $args['queue']));
-  
+
   $new_queues = array_intersect($names, $filter_queues);
   $missing_queues = array_diff($filter_queues, $new_queues);
-  
+
   if (!empty($missing_queues)) {
     echo (t("Queues @queues are missing.\n", array('@queues' => implode(', ', $missing_queues))));
     exit();
@@ -358,7 +373,7 @@ if (isset($args['x'])) {
       if ($options['forked_extra_timeout'] || $options['forked_extra_items']) {
         $queue->watch($item->name);
         $queue->ignore('default');
-        
+
         beanstalkd_log(t('Processing additional items while forked on queue: @name', array('@name' => $item->name)));
         beanstalkd_process(FALSE, $options['forked_extra_timeout'], $options['forked_extra_items']);
       }
