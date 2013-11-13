@@ -9,6 +9,23 @@ Beanstalk is a simple, fast workqueue service. Its interface is generic, but was
 originally designed for reducing the latency of page views in high-volume web
 applications by running time-consuming tasks asynchronously.
 
+Why should I use Beanstalkd
+---------------------------
+
+Beanstalkd is a very powerful queuing system which will process queued jobs
+much faster than the builtin database queuing system.
+
+In systems where there is a lot of queued jobs they will generally not all be
+processed during a single cron run. You can help the system by decreasing the
+time between cron runs but it may come a point where the processing jobs during
+the cron run will never be able to keep up. This is when you are processing
+1000's of queued jobs per day.
+
+By using the provided runqueue.sh worker process jobs will get processed as
+soon as they are submitted to the queue, and in rare cases where the number of
+jobs is too great you can scale up your system by running more than one
+worker and it will incresse your throughput of jobs.
+
 Requirements
 ------------
 
