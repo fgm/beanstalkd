@@ -13,33 +13,6 @@ function beanstalkd_requirements($phase) {
   $requirements = array();
 
   if ($phase == 'runtime') {
-    $library = libraries_detect('pheanstalk');
-    if (!$library['installed']) {
-      $config = conf_path();
-      $profile = variable_get('install_profile', 'default');
-      $searchdir = array(
-        "profile/$profile/libraries",
-        'sites/all/libraries',
-        "$config/libraries",
-      );
-    }
-    else {
-      $searchdir = array();
-    }
-    $requirements['beanstalkd_pheanstalk_path'] = array(
-      'title' => $t('Beanstalkd Pheanstalk path'),
-      'value' => $library['installed'] ? $library['library path'] : $t('Not found. Please ensure that Phpeanstalk is installed in one of the following paths; !paths', array('!paths' => '"' . implode('/pheanstalk", "', $searchdir) . '/pheanstalk"')),
-      'severity' => $library['installed'] ? REQUIREMENT_INFO : REQUIREMENT_ERROR,
-      'description' => $t('Pheanstalk is a pure PHP 5.2+ client for the <a href="http://kr.github.io/beanstalkd/">beanstalkd workqueue</a> and provides the connection class to allow Drupal to talk to the beanstalkd daemon. See <a href="https://github.com/pda/pheanstalk">https://github.com/pda/pheanstalk</a> for more information about Pheanstalk.'),
-    );
-
-    if ($library['installed']) {
-      $requirements['beanstalkd_queue_version'] = array(
-        'title' => $t('Beanstalkd Pheanstalk version'),
-        'value' => version_compare($library['version'], '2.0.0', '>=') ? $library['version'] : '< 2.0.0',
-        'severity' => REQUIREMENT_INFO,
-      );
-    }
 
     try {
       $queue = new BeanstalkdQueue(NULL, TRUE);

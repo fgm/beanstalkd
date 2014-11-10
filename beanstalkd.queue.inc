@@ -21,24 +21,22 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   public function __construct($name, $force_connection = FALSE) {
     $this->tube = $name;
     try {
-      if (beanstalkd_load_pheanstalk()) {
-        $this->beanstalkd_params = beanstalkd_get_queue_options($name);
+      $this->beanstalkd_params = beanstalkd_get_queue_options($name);
 
-        $this->createConnection($this->beanstalkd_params['host'], $this->beanstalkd_params['port']);
-        if ($name) {
-          // If a queue name  is past then set this tube to be used and set it to be the
-          // only tube to be watched.
-          $tube = $this->_tubeName($name);
-          $this->beanstalkd_queue
-            ->useTube($tube)
-            ->watch($tube)
-            ->ignore('default');
-        }
-        elseif ($force_connection) {
-          // Be sure to establish the connection so that we can catch any errors.
-          $this->beanstalkd_queue
-            ->stats();
-        }
+      $this->createConnection($this->beanstalkd_params['host'], $this->beanstalkd_params['port']);
+      if ($name) {
+        // If a queue name  is past then set this tube to be used and set it to be the
+        // only tube to be watched.
+        $tube = $this->_tubeName($name);
+        $this->beanstalkd_queue
+          ->useTube($tube)
+          ->watch($tube)
+          ->ignore('default');
+      }
+      elseif ($force_connection) {
+        // Be sure to establish the connection so that we can catch any errors.
+        $this->beanstalkd_queue
+          ->stats();
       }
     }
     catch (Exception $e) {
@@ -286,9 +284,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    * Create connection to a queue.
    */
   public function createConnection($host, $port) {
-    $class_name = beanstalkd_get_classname();
-
-    $this->beanstalkd_queue = new $class_name($host, $port);
+    $this->beanstalkd_queue = new Pheanstalk_Pheanstalk($host, $port);
   }
 
   /**

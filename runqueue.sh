@@ -313,8 +313,6 @@ ob_end_flush();
 
 $start_memory = memory_get_usage();
 
-beanstalkd_load_pheanstalk();
-
 if (isset($args['c']) || isset($args['host'])) {
   $conf['beanstalkd_host'] = isset($args['c']) ? $args['c'] : $args['host'];
 }
@@ -323,9 +321,7 @@ if (isset($args['p']) || isset($args['port'])) {
   $conf['beanstalkd_port'] = isset($args['p']) ? $args['p'] : $args['port'];
 }
 
-$interface = beanstalkd_get_interface();
-
-$hostname = variable_get('beanstalkd_host', 'localhost') . ':' . variable_get('beanstalkd_port', $interface::DEFAULT_PORT);
+$hostname = variable_get('beanstalkd_host', 'localhost') . ':' . variable_get('beanstalkd_port', Pheanstalk_Pheanstalk::DEFAULT_PORT);
 $names = beanstalkd_get_queues($hostname);
 
 if (isset($args['l']) || isset($args['list'])) {

@@ -2,7 +2,7 @@ name = Beanstalkd
 description = Client for using the beanstalkd queue system to manage selected drupal queues
 core = 7.x
 
-dependencies[] = libraries (>= 2.x)
+dependencies[] = composer_manager
 
 files[] = beanstalkd.queue.inc
 files[] = beanstalkd.test
