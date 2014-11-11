@@ -30,19 +30,7 @@ Requirements
 ------------
 
 * beanstalkd needs to be installed and configured.
-* a copy of pheanstalk needs to be checked out and put inside one of the
-  following directories.
-
-1. profile/{profile}/libraries
-2. sites/all/libraries
-3. sites/{config}/libraries
-
-Use the following command in one of the above directories.
-
-$ git clone git://github.com/pda/pheanstalk.git
-
-or download the latest version from https://github.com/pda/pheanstalk and
-untar/unzip it into one of the above directories.
+* Install Pheanstalk library using Composer manager.
 
 Installation
 ------------
