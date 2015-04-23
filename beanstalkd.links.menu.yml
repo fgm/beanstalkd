@@ -1,0 +1,5 @@
+beanstalkd.admin:
+  title: 'Beanstalkd'
+  parent: system.admin_reports
+  description: 'Display status information about the Beanstalkd queue server.'
+  route_name: beanstalkd.admin

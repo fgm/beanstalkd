@@ -6,6 +6,7 @@
 namespace Drupal\beanstalkd\Queue;
 
 use Drupal\Core\Queue\ReliableQueueInterface;
+use Drupal\Core\Site\Settings;
 
 class QueueBeanstalkd implements ReliableQueueInterface {
   /**
@@ -13,7 +14,8 @@ class QueueBeanstalkd implements ReliableQueueInterface {
    */
   protected $tube;
   /**
-   * The pheanstalk object which connects to the beanstalkd server.
+   * @var \Pheanstalk_Pheanstalk
+   *   The pheanstalk object which connects to the beanstalkd server.
    */
   protected $beanstalkd_queue;
 
@@ -22,6 +24,8 @@ class QueueBeanstalkd implements ReliableQueueInterface {
    *
    * @param $name
    *   Arbitrary string. The name of the queue to work with.
+   * @param bool $force_connection
+   *   If TRUE, return a queue even if no Pheanstalk queue was created.
    */
   public function __construct($name, $force_connection = FALSE) {
     $this->tube = $name;
@@ -42,12 +46,11 @@ class QueueBeanstalkd implements ReliableQueueInterface {
         elseif ($force_connection) {
           // be sure to establish the connection so that we can catch any
           // errors
-          $this->beanstalkd_queue
-            ->stats();
+          $this->beanstalkd_queue->stats();
         }
       }
     }
-    catch (Exception $e) {
+    catch (\Exception $e) {
       $this->beanstalkd_queue = FALSE;
       $this->lastError = $e;
       watchdog_exception('beanstalk', $e);
@@ -55,7 +58,14 @@ class QueueBeanstalkd implements ReliableQueueInterface {
   }
 
   /**
-   * Use Method Overloading to allow unknown methods to be past to Pheanstalk object
+   * Use Method Overloading to allow unknown methods to be passed to Pheanstalk.
+   *
+   * @param string $name
+   * @param mixed[] $arguments
+   *
+   * @return array|bool
+   *
+   * @throws \Exception
    */
   function __call($name, $arguments) {
     if (!$this->beanstalkd_queue) {
@@ -146,7 +156,7 @@ class QueueBeanstalkd implements ReliableQueueInterface {
       return $ret;
     }
     else {
-      throw new Exception(t('Method doesn\'t exist'));
+      throw new \Exception(t('Method does not exist'));
     }
   }
 
@@ -155,10 +165,10 @@ class QueueBeanstalkd implements ReliableQueueInterface {
    *
    * @param $data
    *   Arbitrary data to be associated with the new task in the queue.
-   * @return
+   * @return bool
    *   TRUE if the item was successfully created and was (best effort) added
    *   to the queue, otherwise FALSE. We don't guarantee the item was
-   *   committed to disk, that your disk wasn't hit by a meteor, etc, but as
+   *   committed to disk, that your disk was not hit by a meteor, etc, but as
    *   far as we know, the item is now in the queue.
    */
   public function createItem($data) {
@@ -166,7 +176,7 @@ class QueueBeanstalkd implements ReliableQueueInterface {
       return FALSE;
     }
 
-    return (bool)$this->put($data);
+    return (bool) $this->put($data);
   }
 
   /**
@@ -180,12 +190,12 @@ class QueueBeanstalkd implements ReliableQueueInterface {
    * result might only be valid for a fraction of a second and not provide an
    * accurate representation.
    *
-   * @return
+   * @return int
    *   An integer estimate of the number of items in the queue.
    */
   public function numberOfItems() {
     if (!$this->beanstalkd_queue) {
-      return;
+      return 0;
     }
 
     if ($this->tube) {
@@ -210,7 +220,7 @@ class QueueBeanstalkd implements ReliableQueueInterface {
    *   run more than once (non-idempotent), a larger lease time will make it
    *   more rare for a given task to run multiple times in cases of failure,
    *   at the cost of higher latency.
-   * @return
+   * @return object|FALSE
    *   On success we return an item object. If the queue is unable to claim an
    *   item it returns false. This implies a best effort to retrieve an item
    *   and either the queue is empty or there is some other non-recoverable
@@ -259,10 +269,7 @@ class QueueBeanstalkd implements ReliableQueueInterface {
   }
 
   /**
-   * Delete a finished item from the queue.
-   *
-   * @param $item
-   *   The item returned by DrupalQueueInterface::claimItem().
+   * Delete a queue.
    */
   public function deleteQueue() {
 
@@ -288,12 +295,10 @@ class QueueBeanstalkd implements ReliableQueueInterface {
   }
 
   public function getError() {
-    if (isset($this->lastError)) {
-      return $this->lastError;
-    }
+    return isset($this->lastError) ? $this->lastError : NULL;
   }
 
   private function _tubeName($name) {
-    return settings()->get('beanstalkd_prefix', '') . $name;
+    return Settings::get('beanstalkd_prefix', '') . $name;
   }
 }

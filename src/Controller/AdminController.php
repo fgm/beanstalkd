@@ -7,33 +7,58 @@
 
 namespace Drupal\beanstalkd\Controller;
 
-use Drupal\Core\Controller\ControllerInterface;
+use Drupal\Component\Utility\SafeMarkup;
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
+use Drupal\Core\Datetime\DateFormatter;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 
 class AdminController implements ContainerInjectionInterface {
 
   /**
-   * Injects BookManager Service.
+   * @var \Drupal\Core\Datetime\DateFormatter
+   */
+  protected $dateFormatter;
+
+  public function __construct(DateFormatter $dateFormatter) {
+    $this->dateFormatter = $dateFormatter;
+  }
+
+  /**
+   * Injects date formatter service.
+   *
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *
+   * @return static
    */
   public static function create(ContainerInterface $container) {
-    return new static();
+    return new static(
+      \Drupal::service('date.formatter')
+    );
   }
 
   /**
    * BeanstalkD Queue Stats Callback
    */
   public function adminStats() {
-    if ($queue = new QueueBeanstalkd(NULL, TRUE)) {
+    /** @method stats $queue */
+    $queue = new QueueBeanstalkd(NULL, TRUE);
+    if (!$error = $queue->getError()) {
       // Generate an array of stats
 
-      $stats = $queue->stats();
-      $stats = reset($stats)->getArrayCopy();
+      // PheanstalkInterface supports stats() via __call().
+      /** @var \Pheanstalk_PheanstalkInterface[] $stats */
+      /** @noinspection PhpUndefinedMethodInspection */
+      $statsArray = $queue->stats();
+
+      /** @var \Zend\Stdlib\ArrayObject $stats */
+      $stats = reset($statsArray);
+      $stats->getArrayCopy();
 
       // Define the base variables for theme_table
-      $variables = array(
-        'header' => array(
+      $ret = array(
+        '#type' => 'table',
+        '#header' => array(
           array('data' => t('Property')),
           array('data' => t('Value')),
         ),
@@ -43,13 +68,13 @@ class AdminController implements ContainerInjectionInterface {
       // Loop over each stat result and build it into the $variables['rows'] array
       foreach ($stats as $key => $value) {
         // For safety, clean the key
-        $key = check_plain($key);
+        $key = SafeMarkup::checkPlain($key);
 
         // Depending on the key, format the value as appropriate
         switch ($key) {
           // Format 'interval' keys
           case 'uptime' :
-            $value = format_interval($value);
+            $value = $this->dateFormatter->formatInterval($value);
             break;
 
           // Format 'data size' keys
@@ -60,11 +85,11 @@ class AdminController implements ContainerInjectionInterface {
 
           // Default to a clean value
           default :
-            $value = check_plain($value);
+            $value = SafeMarkup::checkPlain($value);
         }
 
         // Add the the rows
-        $variables['rows'][] = array(
+        $ret['#rows'][] = array(
           'data' => array(
             array('data' => $key),
             array('data' => $value),
@@ -72,13 +97,14 @@ class AdminController implements ContainerInjectionInterface {
         );
       }
 
-      // Return a themed table of data
-      return theme('table', $variables);
+      return $ret;
     }
     else {
-      drupal_set_message(t('Unable to connect to Beanstalkd'));
+      $message = t('Unable to connect to Beanstalkd: @error', [
+        '@error' => $error->getMessage(),
+      ]);
+      drupal_set_message($message, 'error');
+      return ['#markup' => ''];
     }
-
-    return '';
   }
 }

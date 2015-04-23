@@ -1,6 +1,6 @@
 beanstalkd.admin:
   path: '/admin/reports/beanstalkd'
   defaults:
-    _content: Drupal\beanstalkd\Controller\AdminController::adminStats
+    _controller: Drupal\beanstalkd\Controller\AdminController::adminStats
   requirements:
     _permission: 'access beanstalkd stats'

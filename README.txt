@@ -4,13 +4,13 @@ Beanstalkd is a Drupal module to allow Drupal Queues to take advantage of beanst
 What is Beanstalkd
 ------------------
 
-Beanstalk is a simple, fast workqueue service. Its interface is generic, but was originally designed for reducing the latency of page views in high-volume web applications by running time-consuming tasks asynchronously.
+Beanstalk is a simple, fast work queue service. Its interface is generic, but was originally designed for reducing the latency of page views in high-volume web applications by running time-consuming tasks asynchronously.
 
 Requirements
 ------------
 
 * beanstalkd needs to be installed and configured.
-* a copy of pheanstalk needs to be checked out and put inside one of the following directories. 
+* a copy of pheanstalk 2.1 needs to be checked out and put inside one of the following directories.
 
 1. profile/{profile}/libraries
 2. sites/all/libraries
@@ -19,9 +19,9 @@ Requirements
 
 Use the following command in one of the above directories.
 
-$ git clone git://github.com/pda/pheanstalk.git
+$ git clone -b 2.1 git://github.com/pda/pheanstalk.git
 
-or download the latest version from https://github.com/pda/pheanstalk and untar/unzip it into one of the above directories.
+or download the latest 2.x version from https://github.com/pda/pheanstalk and un-tar/unzip it into one of the above directories.
 
 Installation
 ------------
@@ -76,19 +76,19 @@ Beanstalkd will run in a default environment where the messages will be processe
 
 In the module directory is the runqueue.sh script will process messages as they are received. This runs in a shell and uses a blocking method of waiting for the messages to be received. This means that as soon as the message has been submitted if a queue manager is waiting it will start processing the message quickly.
 
-Since Beanstalkd has a non-blocking queue manager you can run many queue managers as you want on different machines. 
+Since Beanstalkd has a non-blocking queue manager you can run many queue managers as you want on different machines.
 
 So in the normal case the cron will run on a single machine in a single thread. However with beanstalkd many message processes as needed across as many machines as you need. Also it means that you can run the queue manages on system that are not your web servers so the processing of the messages will not have any impact on the system except for the intersections between the systems such as the database.
 
 Running the Queue manager
 -------------------------
 
-./runqueue.sh -h
+php ./runqueue.php -h
 
 Beanstalkd Queue manager.
 
 Usage:        runqueue.sh [OPTIONS]
-Example:      runqueue.sh 
+Example:      runqueue.sh
 
 All arguments are long options.
 
@@ -111,6 +111,6 @@ All arguments are long options.
 To run this script without --root argument invoke it from the root directory
 of your Drupal installation with
 
-  ./runqueue.sh
+  php ./runqueue.php
 
 Running this will process any messages on any Beanstalkd queue.
