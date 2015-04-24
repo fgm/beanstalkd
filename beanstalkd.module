@@ -5,6 +5,7 @@
  * Provide core implementation of beanstalkd support for Queues
  */
 
+use Drupal\Core\Queue\QueueWorkerManager;
 use Drupal\Core\Site\Settings;
 
 /**
@@ -103,20 +104,16 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   if (!isset($queue_list)) {
     $mh = \Drupal::moduleHandler();
     $queue_list = array();
-    $cron_queues = $mh->invokeAll('queue_info');
-    $mh->alter('queue_info', $cron_queues);
+    /** @var \Drupal\Core\Queue\QueueWorkerManagerInterface $worker_manager */
+    $worker_manager = \Drupal::service('plugin.manager.queue_worker');
+    $queue_definitions = $worker_manager->getDefinitions();
 
-    // Additionally, check for modules implementing hook_queue_info.
-    $queues = $mh->invokeAll('queue_info');
-    $mh->alter('queue_info', $queues);
-    $queues = array_merge($queues, $cron_queues);
-
-    foreach ($queues as $queue => $settings) {
+    foreach ($queue_definitions as $queue => $definition) {
       $name = 'queue_service_' . $queue;
       $options = beanstalkd_get_queue_options($queue);
       if (Settings::get($name, Settings::get('queue_default', 'queue.system')) == 'queue.beanstalkd') {
-        $settings['options'] = $options;
-        $queue_list[$options['host'] . ':' . $options['port']][$queue] = $settings;
+        $definition['options'] = $options;
+        $queue_list[$options['host'] . ':' . $options['port']][$queue] = $definition;
       }
     }
   }

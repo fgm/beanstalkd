@@ -2,7 +2,9 @@
 <?php
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 use Drupal\Component\Utility\Timer;
+use Drupal\Core\DrupalKernel;
 use Drupal\Core\Site\Settings;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  *
@@ -271,23 +273,23 @@ if (isset($args['r']) || isset($args['root'])) {
 else {
   $path = $cwd;
   $prev_path = NULL;
-  while ($path && $prev_path != $path && !(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
+  while ($path && $prev_path != $path && !(file_exists($path . '/index.php') && file_exists($path . '/core/includes/bootstrap.inc'))) {
     $prev_path = $path;
     $path = dirname($path);
   }
 
-  if (!(file_exists($path . '/index.php') && file_exists($path . '/includes/bootstrap.inc'))) {
+  if (!(file_exists($path . '/index.php') && file_exists($path . '/core/includes/bootstrap.inc'))) {
     echo "Unable to locate Drupal root, user -r option to specify path to Drupal root\n";
     exit(1);
   }
   chdir($path);
 }
 
-define('DRUPAL_ROOT', realpath(getcwd()));
+define('INITIAL_DRUPAL_ROOT', realpath(getcwd()));
 
 if (isset($args['s']) || isset($args['site'])) {
   $site = isset($args['s']) ? $args['s'] : $args['site'];
-  if (file_exists(realpath(DRUPAL_ROOT . '/sites/' . $site))) {
+  if (file_exists(realpath(INITIAL_DRUPAL_ROOT . '/sites/' . $site))) {
     $_SERVER['HTTP_HOST'] = $site;
   }
   else {
@@ -302,8 +304,14 @@ else if (preg_match('/' . preg_quote($path . '/sites/', '/') . '(.*?)\//i', $cwd
 }
 
 ini_set('display_errors', 0);
-include_once DRUPAL_ROOT . '/includes/bootstrap.inc';
-drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+$autoloader = include_once INITIAL_DRUPAL_ROOT . '/core/vendor/autoload.php';
+include_once INITIAL_DRUPAL_ROOT . '/core/includes/bootstrap.inc';
+
+$request = Request::createFromGlobals();
+$site_path = DrupalKernel::findSitePath($request);
+$kernel = DrupalKernel::createFromRequest($request, $autoloader, 'prod');
+$kernel->boot();
+$kernel->prepareLegacyRequest($request);
 ini_set('display_errors', 1);
 
 // turn off the output buffering that drupal is doing by default.
