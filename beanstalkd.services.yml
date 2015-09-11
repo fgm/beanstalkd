@@ -1,3 +1,6 @@
 services:
   queue.beanstalkd:
     class: Drupal\beanstalkd\Queue\QueueBeanstalkdFactory
+  logger.channel.beanstalkd_runqueue:
+    parent: logger.channel_base
+    arguments: ['beanstalkd/runqueue']
