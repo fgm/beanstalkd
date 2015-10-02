@@ -2,16 +2,27 @@
 
 /**
  * @file
+ * Drush plugin for Beanstalkd.
  */
+
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 use Drupal\Component\Utility\Unicode;
 
 /**
- * Implementation of hook_drush_command().
+ * Implements hook_drush_command().
  */
 function beanstalkd_drush_command() {
   $items = array();
+  // ---- New-style commands ---------------------------------------------------
+  $items['beanstalkd-drupal-queues'] = [
+    'descriptions' => 'List configured queue settings',
+    'aliases' => ['btdq'],
+    'options' => [
+      'all' => 'Also list workers not configured for Beanstalkd handling.',
+    ],
+  ];
 
+  // ---- Old commands below ---------------------------------------------------
   $items['beanstalkd-servers'] = array(
     'callback' => 'drush_beanstalkd_servers',
     'description' => 'List of all the beanstalkd servers',
@@ -101,16 +112,46 @@ function beanstalkd_drush_command() {
   return $items;
 }
 
+/**
+ * Drush callback for beanstalkd-drupal_queues.
+ */
+function drush_beanstalkd_drupal_queues() {
+  /* @var \Drupal\beanstalkd\WorkerManager $manager */
+  $manager = \Drupal::service('beanstalkd.worker_manager');
+
+  $all = !!drush_get_option('all');
+
+  $queues = $all
+    ? array_keys($manager->getWorkers())
+    : $manager->getBeanstalkdQueues();
+
+  drush_print_r($queues);
+}
+
+// ==== Old callbacks below ====================================================
+/**
+ * Drush callback for beanstalkd-servers.
+ */
 function drush_beanstalkd_servers() {
-  beanstalkd_load_pheanstalk();
+  // beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
 
   drush_print('Available beanstalkd servers:');
   drush_print("\n" . implode("\n", array_keys($queues)));
 }
 
+/**
+ * Drush callback for beanstalkd-server-stats.
+ *
+ * @param string $host
+ *   The Beanstalkd host.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too ?
+ */
 function drush_beanstalkd_server_stats($host = NULL) {
   beanstalkd_load_pheanstalk();
+
   $queues = beanstalkd_get_host_queues();
 
   if ($host) {
@@ -155,6 +196,12 @@ function drush_beanstalkd_server_stats($host = NULL) {
   }
 }
 
+/**
+ * Drush callback for beanstalkd-queue-list.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too ?
+ */
 function drush_beanstalkd_queue_list() {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
@@ -168,6 +215,15 @@ function drush_beanstalkd_queue_list() {
   drush_print("\n" . implode("\n", $names));
 }
 
+/**
+ * Drush callback for beanstalkd-queue-stats.
+ *
+ * @param string $name
+ *   The name of the Beanstalkd queue for which to get Beanstalks information.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too ?
+ */
 function drush_beanstalkd_queue_stats($name = NULL) {
   beanstalkd_load_pheanstalk();
 
@@ -194,6 +250,15 @@ function drush_beanstalkd_queue_stats($name = NULL) {
   }
 }
 
+/**
+ * Drush callback for beanstalkd-item-stats.
+ *
+ * @param mixed $item_id
+ *   The item for which to get Beanstalkd information.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too ?
+ */
 function drush_beanstalkd_item_stats($item_id = NULL) {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
@@ -241,14 +306,32 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   }
 }
 
+/**
+ * Drush callback for beanstalkd-peek-ready.
+ *
+ * @param string $name
+ *   The name of the queues on which to peek for ready items.
+ */
 function drush_beanstalkd_peek_ready($name = NULL) {
   drush_beanstalkd_peek_items('ready', $name);
 }
 
+/**
+ * Drush callback for beanstalkd-peek-ready.
+ *
+ * @param string $name
+ *   The name of the queues on which to peek for buried items.
+ */
 function drush_beanstalkd_peek_buried($name = NULL) {
   drush_beanstalkd_peek_items('buried', $name);
 }
 
+/**
+ * Drush callback for beanstalkd-peek-ready.
+ *
+ * @param string $name
+ *   The name of the queues on which to peek for buried items.
+ */
 function drush_beanstalkd_peek_delayed($name = NULL) {
   drush_beanstalkd_peek_items('delayed', $name);
 }
@@ -256,14 +339,15 @@ function drush_beanstalkd_peek_delayed($name = NULL) {
 /**
  * FIXME probably incorrect logic: $name argument is overwritten in both cases.
  *
- * @param $type
- * @param $name
+ * @param string $type
+ *   The type of items to peek at.
+ * @param string $name
+ *   The name of the queue in which to peek.
  *
  * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too ?
  */
-function drush_beanstalkd_peek_items($type,
-  /** @noinspection PhpUnusedParameterInspection */
-  $name) {
+function drush_beanstalkd_peek_items($type, $name) {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
 
@@ -340,7 +424,7 @@ function drush_beanstalkd_peek_items($type,
  *
  * @param string $a
  *   A queue name.
- * @param null $b
+ * @param mixed $b
  *   Unused.
  * @param bool $init
  *   - NULL if $init,
@@ -348,6 +432,7 @@ function drush_beanstalkd_peek_items($type,
  *   - FALSE otherwise.
  *
  * @return bool|null
+ *   As per array_filter().
  */
 function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
   static $queue, $type;
@@ -367,6 +452,15 @@ function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
   }
 }
 
+/**
+ * Drush callback for beanstalkd-kick.
+ *
+ * @param array|int $items
+ *   An array of item ids to kick, or a single item id.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too ?
+ */
 function drush_beanstalkd_kick($items = NULL) {
   if (!is_numeric($items)) {
     drush_log(dt('@items is not a numeric value', array('@items' => $items)), 'error');
@@ -418,7 +512,7 @@ function drush_beanstalkd_kick($items = NULL) {
         $name = reset($names);
       }
     }
-    else if (in_array($name, $names) === FALSE) {
+    elseif (in_array($name, $names) === FALSE) {
       drush_log(dt('There are currently buried items on queue @name', array('@name' => $name)), 'error');
       return;
     }

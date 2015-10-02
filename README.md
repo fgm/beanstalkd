@@ -43,7 +43,7 @@ If you want to set beanstalkd as the default queue manager then add the followin
 
 Alternatively you can also set for each queue to use beanstalkd
 
-    $settings['queue_class_{queue name}'] = 'QueueBeanstalkd';
+    $settings['queue_class_{queue_name}'] = 'queue.beanstalkd';
 
 Lastly you can also set some beanstalkd defaults.
 

@@ -8,6 +8,12 @@ namespace Drupal\beanstalkd\Queue;
 use Drupal\Core\Queue\ReliableQueueInterface;
 use Drupal\Core\Site\Settings;
 
+/**
+ * Class QueueBeanstalkd
+ *
+ * @method delete(object $job) Pheanstalk_Job
+
+ */
 class QueueBeanstalkd implements ReliableQueueInterface {
   /**
    *
@@ -301,4 +307,5 @@ class QueueBeanstalkd implements ReliableQueueInterface {
   private function _tubeName($name) {
     return Settings::get('beanstalkd_prefix', '') . $name;
   }
+
 }
