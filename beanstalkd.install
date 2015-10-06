@@ -2,92 +2,58 @@
 
 /**
  * @file
- * Installation requirements for beanstalkd
+ * Installation requirements for beanstalkd.
  */
 
-use Drupal\beanstalkd\Queue\QueueBeanstalkd;
-use Drupal\Core\Site\Settings;
+use Pheanstalk\Pheanstalk;
 
 /**
- * Implementation of hook_requirements().
- *
- * {@inheritdoc}
+ * Implements hook_requirements().
  */
 function beanstalkd_requirements($phase) {
-  $requirements = array();
+  $requirements = [];
 
-  if ($phase == 'runtime') {
-    $library = libraries_detect('pheanstalk');
-    if (!$library['installed']) {
-      /** @var \Drupal\Core\DrupalKernelInterface $kernel */
-      $kernel = \Drupal::service('kernel');
-      $config = $kernel->getSitePath();
-      $profile = Settings::get('install_profile', 'default');
-      $search_dir = array(
-        "profile/$profile/libraries",
-        'sites/all/libraries',
-        "$config/libraries",
-      );
-    }
-    else {
-      $search_dir = array();
-    }
-    $requirements['beanstalkd_pheanstalk_path'] = array(
-      'title' => t('Beanstalkd Pheanstalk path'),
-      'value' => $library['installed'] ? $library['library path'] : t('Not found. Please ensure that Pheanstalk is installed in one of the following paths; !paths', array('!paths' => '"' . implode('/pheanstalk", "', $search_dir) . '/pheanstalk"')),
-      'severity' => $library['installed'] ? NULL : REQUIREMENT_ERROR,
-      'description' => t('Pheanstalk is a pure PHP 5.2+ client for the <a href="http://kr.github.io/beanstalkd/">beanstalkd work queue</a> and provides the connection class to allow Drupal to talk to the beanstalkd daemon. See <a href="https://github.com/pda/pheanstalk">https://github.com/pda/pheanstalk</a> for more information about Pheanstalk.'),
-    );
+  // Neither driver nor server is necessary for install/uninstall.
+  if ($phase === 'install') {
+    return $requirements;
+  }
 
-    if ($library['installed']) {
-      $requirements['beanstalkd_queue_version'] = array(
-        'title' => t('Beanstalkd Pheanstalk version'),
-        'value' => $library['version'],
-      );
-    }
+  $requirements['pheanstalk'] = [
+    'title' => t('Pheanstalk library'),
+    'severity' => REQUIREMENT_OK,
+  ];
 
-    try {
-      $queue = new QueueBeanstalkd(NULL, TRUE);
+  if (!class_exists('Pheanstalk\Pheanstalk', TRUE)) {
+    $requirements['pheanstalk'] = [
+      'value' => t('Not found. Please ensure that Pheanstalk 3.x is installed by updating (root)/composer.json to require "pda/pheanstalk": "^3.1.0", and running composer update.'),
+      'severity' => REQUIREMENT_ERROR,
+    ] + $requirements['pheanstalk'];
 
-      $requirements['beanstalkd_queue_count'] = array(
-        'title' => t('Beanstalkd Queue count'),
-        'value' => $queue->numberOfItems(),
-        'description' => t('Provides a count of all the number of items that are currently ready to be processed on the queue'),
-      );
+    return $requirements;
+  }
 
-      if ($e = $queue->getError()) {
-        $requirements['beanstalkd_last_error'] = array(
-          'title' => t('Beanstalkd Queue count error'),
-          'value' => t('%message in %file on line %line.', array('%error' => $e->getCode(), '%message' => $e->getMessage(), '%file' => $e->getFile(), '%line' => $e->getLine())),
-          'severity' => REQUIREMENT_ERROR,
-          'description' => t('An error has occurred while getting the current number of in the queue.'),
-        );
-      }
-    }
-    catch (\Pheanstalk_Exception_ConnectionException $e) {
-      $requirements['beanstalkd_last_error'] = array(
-        'title' => t('Beanstalkd Queue error'),
-        'value' => $e->getMessage(),
-        'severity' => REQUIREMENT_ERROR,
-        'description' => t('An error has occurred while communicating with beanstalkd'),
-      );
-    }
-    catch (\Pheanstalk_Exception $e) {
-      $requirements['beanstalkd_last_error'] = array(
-        'title' => t('Beanstalkd Queue error'),
-        'value' => '(' . get_class($e) . ') ' . $e->getMessage(),
-        'severity' => REQUIREMENT_ERROR,
-        'description' => t('An error has occurred with PHPBeanstalk'),
-      );
-    }
-    catch (\Exception $e) {
-      $requirements['beanstalkd_last_error'] = array(
-        'title' => t('Beanstalkd Queue error'),
-        'value' => '(' . get_class($e) . ') ' . $e->getMessage(),
-        'severity' => REQUIREMENT_ERROR,
-        'description' => t('An error has occurred.'),
-      );
-    }
+  /* @var \Drupal\beanstalkd\PheanstalkFactory $factory */
+  $factory = \Drupal::service('beanstalkd.pheanstalk.factory');
+  $driver = $factory->create();
+  $requirements['pheanstalk'] += [
+    'value' => Pheanstalk::VERSION,
+  ];
+
+  $stats = $driver->stats();
+  $requirements['beanstalkd'] = [
+    'title' => t('Beanstalkd server'),
+  ];
+  if (isset($stats['version'])) {
+    $requirements['beanstalkd'] = [
+      'severity' => REQUIREMENT_OK,
+      'value' => $stats['version'],
+    ] + $requirements['pheanstalk'];
+  }
+  else {
+    $requirements['beanstalkd'] = [
+      'severity' => REQUIREMENT_ERROR,
+      'value' => t('Server response does not provide version.'),
+    ] + $requirements['pheanstalk'];
   }
 
   return $requirements;
