@@ -34,7 +34,8 @@ class BeanstalkdServerFactory {
     'servers' => [self::DEFAULT_SERVER_ALIAS => self::DEFAULT_SERVER_PARAMETERS],
   ];
 
-  const DEFAULT_QUEUE_NAME = 'default';
+  // As luck has it.
+  const DEFAULT_QUEUE_NAME = PheanstalkInterface::DEFAULT_TUBE;
 
   const DEFAULT_QUEUE_MAPPINGS = [
     self::DEFAULT_QUEUE_NAME => self::DEFAULT_SERVER_ALIAS,
@@ -108,7 +109,7 @@ class BeanstalkdServerFactory {
    */
   protected function initServers(array $servers) {
     foreach ($servers as &$server_parameters) {
-      $server_parameters  += static::DEFAULT_SERVER_PARAMETERS;
+      $server_parameters += static::DEFAULT_SERVER_PARAMETERS;
     }
     $servers = array_replace_recursive(static::DEFAULT_SERVERS, $servers);
     $this->servers = $servers;
