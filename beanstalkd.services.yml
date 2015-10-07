@@ -1,6 +1,6 @@
 services:
-  beanstalkd.pheanstalk.factory:
-    class: Drupal\beanstalkd\PheanstalkFactory
+  beanstalkd.server.factory:
+    class: Drupal\beanstalkd\Server\BeanstalkdServerFactory
     arguments: ['@settings']
 
   queue.beanstalkd:
