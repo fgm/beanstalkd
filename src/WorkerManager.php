@@ -34,7 +34,7 @@ class WorkerManager {
    *
    * @var string
    */
-  protected $defaultQueueServiceName;
+  protected $defaultService;
 
   /**
    * The queue service.
@@ -57,13 +57,16 @@ class WorkerManager {
    *   The plugin.manager.queue_worker service.
    * @param \Drupal\Core\Site\Settings $settings
    *   The settings service.
+   * @param \Drupal\Core\Queue\QueueFactory $queue_factory
+   *   The queue factory service.
    */
-  public function __construct(QueueWorkerManagerInterface $base_manager, Settings $settings, QueueFactory $queue_factory) {
+  public function __construct(QueueWorkerManagerInterface $base_manager,
+    Settings $settings, QueueFactory $queue_factory) {
     $this->baseManager = $base_manager;
     $this->queueFactory = $queue_factory;
     $this->settings = $settings;
 
-    $this->defaultQueueServiceName = $this->settings->get('queue_default', 'queue.database');
+    $this->defaultService = $this->settings->get('queue_default', 'queue.database');
   }
 
   /**
@@ -87,7 +90,7 @@ class WorkerManager {
    *   The name of the factory service for the queue.
    */
   protected function getQueueService($queue_name) {
-    return $this->settings->get("queue_service_${queue_name}", $this->defaultQueueServiceName);
+    return $this->settings->get('queue_service_' . $queue_name, $this->defaultService);
   }
 
   /**
@@ -98,8 +101,9 @@ class WorkerManager {
    */
   public function getBeanstalkdQueues() {
     $all_queues = array_keys($this->getWorkers());
-    $queues = array_filter($all_queues, function ($queue_name) {
-      return static::SERVICE === $this->getQueueService($queue_name);
+    $that = $this;
+    $queues = array_filter($all_queues, function ($queue_name) use($that) {
+      return static::SERVICE === $that->getQueueService($queue_name);
     });
 
     return $queues;

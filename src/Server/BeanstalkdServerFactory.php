@@ -136,7 +136,8 @@ class BeanstalkdServerFactory {
   public function get($alias) {
     if (!isset($this->instances[$alias])) {
       $parameters = $this->getServerDefinition($alias);
-      $pheanstalk = new Pheanstalk($parameters['host'], $parameters['port'], $parameters['connect_timeout'], $parameters['persistent']);
+      $pheanstalk = new Pheanstalk($parameters['host'], $parameters['port'],
+        $parameters['connect_timeout'], $parameters['persistent']);
       $this->instances[$alias] = new BeanstalkdServer($pheanstalk);
     }
 

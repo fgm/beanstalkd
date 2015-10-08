@@ -233,7 +233,7 @@ class BeanstalkdServer {
     $stats = $this->driver->statsTube($name);
     foreach (static::JOB_STATES as $state) {
       $state_name = strtolower($state);
-      $key = "current-jobs-{$state_name}";
+      $key = 'current-jobs-' . $state_name;
       $count += $stats[$key];
     }
 

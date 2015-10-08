@@ -20,7 +20,7 @@ class QueueBeanstalkd implements ReliableQueueInterface {
    */
   protected $tube;
   /**
-   * @var \Pheanstalk_Pheanstalk
+   * @var \Pheanstalk\PheanstalkInterface
    *   The pheanstalk object which connects to the beanstalkd server.
    */
   protected $beanstalkd_queue;

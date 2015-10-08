@@ -45,7 +45,7 @@ class Item {
    * {@inheritdoc}
    */
   public function __toString() {
-    return "$this->data";
+    return '' . $this->data;
   }
 
 }

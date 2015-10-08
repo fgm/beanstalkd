@@ -1,0 +1,16 @@
+{
+    "name": "fgm/beanstalkd",
+    "description": "A Drupal module exposing Beanstalkd to the Drupal 8 Queue API.",
+    "type": "library",
+    "require": {
+        "pda/pheanstalk": "^3.1.0"
+    },
+    "license": "GPL-2.0+",
+    "authors": [
+        {
+            "name": "Frederic G. MARAND",
+            "email": "fgm@osinet.fr"
+        }
+    ],
+    "minimum-stability": "dev"
+}

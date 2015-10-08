@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Contains BeanstalkdServerTest.
@@ -6,9 +7,8 @@
 
 namespace Drupal\beanstalkd\Tests;
 
-use Drupal\beanstalkd\Server\BeanstalkdServer;
-use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Tests\libraries\Kernel\KernelTestBase;
+use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 
 /**
  * Class BeanstalkdServerTest.
@@ -36,8 +36,6 @@ class BeanstalkdServerTest extends KernelTestBase {
 
   /**
    * Test item deletion.
-   *
-   * @covers \Drupal\beanstalkd\Server\BeanstalkdServer
    */
   public function testDelete() {
     $queue = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME;
@@ -48,8 +46,9 @@ class BeanstalkdServerTest extends KernelTestBase {
     // Avoid any "ground-effect" during tests with counts near 0.
     $create_count = 5;
 
+    $job_id = 0;
     for ($i = 0; $i < $create_count; $i++) {
-      $job_id = $server->createItem($queue, "foo$i");
+      $job_id = $server->createItem($queue, 'foo' . $i);
     }
 
     $expected = $start_count + $create_count;
@@ -70,35 +69,31 @@ class BeanstalkdServerTest extends KernelTestBase {
 
   /**
    * Tests tube flushing.
-   *
-   * @covers \Drupal\beanstalkd\Server\BeanstalkdServer
    */
   public function testFlush() {
     $queue = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME;
     $server = $this->serverFactory->get(BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
     $server->addQueue($queue);
-    $item = "foo";
+    $item = 'foo';
     $server->createItem($queue, $item);
     $server->flushTube($queue);
     $actual = $server->getTubeItemCount($queue);
-    $this->assertEquals(0, $actual, "Tube is empty after flushTube");
+    $this->assertEquals(0, $actual, 'Tube is empty after flushTube');
 
     $server->removeQueue($queue);
-    $this->assertEquals(0, $actual, "Tube is empty after removeQueue");
+    $this->assertEquals(0, $actual, 'Tube is empty after removeQueue');
   }
 
   /**
-   * Tests flushing an unmanaged queue: should not error, and should return 0.
-   *
-   * @covers \Drupal\beanstalkd\Server\BeanstalkdServer
+   * Tests flushing an un-managed queue: should not error, and should return 0.
    */
   public function testSadFlush() {
     $queue = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME;
     $server = $this->serverFactory->get(BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
-    $server->createItem($queue, "foo");
+    $server->createItem($queue, 'foo');
     $server->flushTube($queue);
     $actual = $server->getTubeItemCount($queue);
-    $this->assertEquals(0, $actual, "Tube is empty after flush");
+    $this->assertEquals(0, $actual, 'Tube is empty after flush');
   }
 
 }
