@@ -29,7 +29,11 @@ class SampleWorker extends QueueWorkerBase {
    * {@inheritdoc}
    */
   public function processItem($data) {
-    var_dump(__METHOD__, $data);
+    $context = [
+      'data' => var_export($data, TRUE),
+    ];
+
+    \Drupal::logger('beanstalkd')->debug(t('Processed {data}.'), $context);
   }
 
 }

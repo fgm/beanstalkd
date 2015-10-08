@@ -26,16 +26,16 @@ Requirements
 Installation
 ------------
 
-  1. Install like a normal Drupal module.
-  2. In your settings.php you need to set the `$conf` variables to the correct settings.
+  1. Install like a normal Drupal module. Do _not_ run `composer install` in the module directory: although there is a `composer.json` file in the project, it is only here to inform Scrutinizer CI about dependencies.
+  2. In your `settings.php`, set the `$settings` variables to the correct settings:
+      * If you want to set beanstalkd as the default queue manager then add the following to your settings.
 
-If you want to set beanstalkd as the default queue manager then add the following to your settings.php
+          $settings['queue_default'] = 'queue.beanstalkd';
 
-    $settings['queue_default'] = 'queue.beanstalkd';
+      * Alternatively you can also set for each queue to use beanstalkd using one of these formats:
 
-Alternatively you can also set for each queue to use beanstalkd
-
-    $settings['queue_class_{queue_name}'] = 'queue.beanstalkd';
+          $settings['queue_service_{queue_name}'] = 'queue.beanstalkd';
+          $settings['queue_reliable_service_{queue_name}'] = 'queue.beanstalkd';
 
 ____
 
