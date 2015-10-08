@@ -61,6 +61,26 @@ class BeanstalkdServer {
   }
 
   /**
+   * Add data for a job to a tube.
+   *
+   * To match the Drupal Queue API, this method does not support delayed jobs.
+   *
+   * @param string $name
+   *   The tube name.
+   * @param mixed $data
+   *   The job workload.
+   */
+  public function createItem($name, $data) {
+    // Do not do anything on tube not controlled by this instance.
+    if (!isset($this->queueNames[$name])) {
+      return;
+    }
+
+    $item = new Item($data);
+    $this->driver->putInTube($name, $item->__toString());
+  }
+
+  /**
    * Remove a Drupal queue from this server: empty it and unregister it.
    *
    * @param string $name
@@ -90,7 +110,6 @@ class BeanstalkdServer {
    */
   protected function flush($name, $state, $limit) {
     $jobs = 0;
-    $limit = 5;
 
     // Delayed jobs cannot be deleted: they need to be readied first.
     if ($state === PeekCommand::TYPE_DELAYED) {
