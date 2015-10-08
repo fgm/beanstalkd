@@ -11,6 +11,7 @@ namespace Drupal\beanstalkd\Server;
 
 use Pheanstalk\Command\PeekCommand;
 use Pheanstalk\Exception\ServerException;
+use Pheanstalk\Job;
 use Pheanstalk\PheanstalkInterface;
 
 /**
@@ -69,15 +70,38 @@ class BeanstalkdServer {
    *   The tube name.
    * @param mixed $data
    *   The job workload.
+   *
+   * @return int
+   *   The id of the created job item. 0 indicates an error.
    */
   public function createItem($name, $data) {
+    // Do not do anything on tube not controlled by this instance.
+    if (!isset($this->queueNames[$name])) {
+      return 0;
+    }
+
+    $item = new Item($data);
+    $id = $this->driver->putInTube($name, $item->__toString());
+    return $id;
+  }
+
+  /**
+   * Delete a job by its id.
+   *
+   * @param string $name
+   *   The tube name.
+   * @param int $id
+   *   The job id.
+   */
+  public function deleteItem($name, $id) {
     // Do not do anything on tube not controlled by this instance.
     if (!isset($this->queueNames[$name])) {
       return;
     }
 
-    $item = new Item($data);
-    $this->driver->putInTube($name, $item->__toString());
+    // Pheanstalk delete() only uses $job->getId(), not the data.
+    $job = new Job($id, NULL);
+    $this->driver->delete($job);
   }
 
   /**

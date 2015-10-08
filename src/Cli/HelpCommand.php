@@ -16,7 +16,7 @@ namespace Drupal\beanstalkd\Cli;
 class HelpCommand extends CommandBase {
 
   public function __invoke() {
-    echo <<<EOF
+    echo <<<HELP
 
 Beanstalkd Queue manager.
 
@@ -53,7 +53,7 @@ of your Drupal installation with
   {$this->script}
 
 \n
-EOF;
+HELP;
   }
 
 }

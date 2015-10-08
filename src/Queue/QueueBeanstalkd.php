@@ -28,8 +28,8 @@ class QueueBeanstalkd implements ReliableQueueInterface {
   /**
    * Start working with a queue.
    *
-   * @param $name
-   *   Arbitrary string. The name of the queue to work with.
+   * @param string $name
+   *   The name of the queue to work with.
    * @param bool $force_connection
    *   If TRUE, return a queue even if no Pheanstalk queue was created.
    */
@@ -297,7 +297,7 @@ class QueueBeanstalkd implements ReliableQueueInterface {
   }
 
   public function createConnection($host, $port) {
-    $this->beanstalkd_queue = new \Pheanstalk_Pheanstalk($host, $port);
+    $this->beanstalkd_queue = new \Pheanstalk\Pheanstalk($host, $port);
   }
 
   public function getError() {

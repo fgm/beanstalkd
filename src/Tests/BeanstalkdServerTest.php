@@ -35,6 +35,40 @@ class BeanstalkdServerTest extends KernelTestBase {
   }
 
   /**
+   * Test item deletion.
+   *
+   * @covers \Drupal\beanstalkd\Server\BeanstalkdServer
+   */
+  public function testDelete() {
+    $queue = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME;
+    $server = $this->serverFactory->get(BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
+    $server->addQueue($queue);
+    $start_count = $server->getTubeItemCount($queue);
+
+    // Avoid any "ground-effect" during tests with counts near 0.
+    $create_count = 5;
+
+    for ($i = 0; $i < $create_count; $i++) {
+      $job_id = $server->createItem($queue, "foo$i");
+    }
+
+    $expected = $start_count + $create_count;
+    $actual = $server->getTubeItemCount($queue);
+    $this->assertEquals($expected, $actual);
+
+    // This should not do anything, since the queue name is incorrect.
+    $server->deleteItem($queue . $queue, $job_id);
+    $this->assertEquals($expected, $actual);
+
+    $server->deleteItem($queue, $job_id);
+    $expected = $start_count + $create_count - 1;
+    $actual = $server->getTubeItemCount($queue);
+    $this->assertEquals($expected, $actual, 'Deletion actually deletes items.');
+
+    $server->removeQueue($queue);
+  }
+
+  /**
    * Tests tube flushing.
    *
    * @covers \Drupal\beanstalkd\Server\BeanstalkdServer

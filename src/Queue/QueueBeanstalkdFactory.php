@@ -15,4 +15,5 @@ class QueueBeanstalkdFactory {
   public function get($name) {
     return new QueueBeanstalkd($name);
   }
+
 }
