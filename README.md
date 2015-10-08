@@ -1,8 +1,9 @@
 
 Beanstalkd is a Drupal module to allow Drupal Queues to take advantage of 
-beanstalkd to process the queues instead of the built in Database queue system 
+beanstalkd to process the queues instead of the built-in Database queue system 
 that ships with Drupal.
 
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/FGM/beanstalkd/badges/quality-score.png?b=8x-worker)](https://scrutinizer-ci.com/g/FGM/beanstalkd/?branch=8x-worker)
 
 What is Beanstalkd
 ------------------
@@ -16,26 +17,17 @@ Requirements
 ------------
 
   * beanstalkd needs to be installed and configured.
-  * a copy of pheanstalk 2.1 needs to be checked out and put inside one of the following directories.
-    - profile/{profile}/libraries
-    - sites/all/libraries
-    - sites/{config}/libraries
-    - libraries
-
-Use the following command in one of the above directories.
-
-    $ git clone -b 2.1 git://github.com/pda/pheanstalk.git
-
-or download the latest 2.x version from 
-[https://github.com/pda/pheanstalk](https://github.com/pda/pheanstalk) 
-and un-tar/unzip it into one of the above directories.
+  * Drupal 8.0.0-RC1 or more recent must be configured with Pheanstalk 3.x:  
+    - edit `(yoursite)/composer.json` (not `(yoursite)/core/composer.json`)
+    - insert: `"pda/pheanstalk": "^3.1"` in the `require` section and save.
+    - update your vendors by typing `composer update`
 
 
 Installation
 ------------
 
   1. Install like a normal Drupal module.
-  2. In your settings.php you need to set the $conf variables to the correct settings.
+  2. In your settings.php you need to set the `$conf` variables to the correct settings.
 
 If you want to set beanstalkd as the default queue manager then add the following to your settings.php
 
@@ -44,6 +36,11 @@ If you want to set beanstalkd as the default queue manager then add the followin
 Alternatively you can also set for each queue to use beanstalkd
 
     $settings['queue_class_{queue_name}'] = 'queue.beanstalkd';
+
+____
+
+Text above these lines is up-to-date. Text below this line no longer applies, and needs editing.
+____
 
 Lastly you can also set some beanstalkd defaults.
 
