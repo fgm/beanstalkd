@@ -25,6 +25,13 @@ class BeanstalkdServer {
   ];
 
   /**
+   * The default timeout for claimItem().
+   *
+   * @TODO make this configurable.
+   */
+  const DEFAULT_CLAIM_TIMEOUT = 3600;
+
+  /**
    * The wrapped Pheanstalk.
    *
    * @var \Pheanstalk\PheanstalkInterface
@@ -36,7 +43,7 @@ class BeanstalkdServer {
    *
    * @var array
    */
-  protected $queueNames;
+  protected $tubeNames;
 
   /**
    * Constructor.
@@ -48,7 +55,7 @@ class BeanstalkdServer {
    */
   public function __construct(PheanstalkInterface $driver, array $queue_names = []) {
     $this->driver = $driver;
-    $this->queueNames = array_combine($queue_names, $queue_names);
+    $this->tubeNames = array_combine($queue_names, $queue_names);
   }
 
   /**
@@ -57,8 +64,30 @@ class BeanstalkdServer {
    * @param string $name
    *   The name of a Drupal queue.
    */
-  public function addQueue($name) {
-    $this->queueNames[$name] = $name;
+  public function addTube($name) {
+    $this->tubeNames[$name] = $name;
+  }
+
+  /**
+   * Reserve the next ready item from a tube.
+   *
+   * @param string $name
+   *   The name of a tube.
+   *
+   * @return false|\Pheanstalk\Job
+   *   A job submitted to the queue, or FALSE if an error occurred.
+   */
+  public function claimItem($name) {
+    // Do not do anything on tube not controlled by this instance.
+    if (!isset($this->tubeNames[$name])) {
+      return FALSE;
+    }
+
+    /** @var \Pheanstalk\Job $job */
+    $job = $this->driver->reserve(static::DEFAULT_CLAIM_TIMEOUT);
+    // @TODO Implement specific handling for jobs containing a Payload object,
+    // like the ability to interact with TTR.
+    return $job;
   }
 
   /**
@@ -76,12 +105,12 @@ class BeanstalkdServer {
    */
   public function createItem($name, $data) {
     // Do not do anything on tube not controlled by this instance.
-    if (!isset($this->queueNames[$name])) {
+    if (!isset($this->tubeNames[$name])) {
       return 0;
     }
 
-    $item = new Item($data);
-    $id = $this->driver->putInTube($name, $item->__toString());
+    $payload = new Payload($data);
+    $id = $this->driver->putInTube($name, $payload->__toString());
     return $id;
   }
 
@@ -95,7 +124,7 @@ class BeanstalkdServer {
    */
   public function deleteItem($name, $id) {
     // Do not do anything on tube not controlled by this instance.
-    if (!isset($this->queueNames[$name])) {
+    if (!isset($this->tubeNames[$name])) {
       return;
     }
 
@@ -105,14 +134,45 @@ class BeanstalkdServer {
   }
 
   /**
-   * Remove a Drupal queue from this server: empty it and unregister it.
+   * Release a job obtained from claimItem().
+   *
+   * @param string $name
+   *   The tube name.
+   * @param \Pheanstalk\Job $job
+   *   A jobobtained from claimItem().
+   */
+  public function releaseItem($name, Job $job) {
+    // Do not do anything on tube not controlled by this instance.
+    if (!isset($this->tubeNames[$name])) {
+      return;
+    }
+
+    // @TODO implement support for non-default priority/delay for Payload jobs.
+    $this->driver->release($job);
+  }
+
+  /**
+   * Remove a Drupal queue from this server: empty it and un-register it.
    *
    * @param string $name
    *   The name of a Drupal queue.
    */
-  public function removeQueue($name) {
+  public function removeTube($name) {
     $this->flushTube($name);
-    unset($this->queueNames[$name]);
+    $this->releaseTube($name);
+  }
+
+  /**
+   * Stop handling a queue.
+   *
+   * This method is a test helper only. In normal situations, use removeTube()
+   * instead to ensure handling consistency.
+   *
+   * @param string $name
+   *   The name of a queue to stop handling.
+   */
+  public function releaseTube($name) {
+    unset($this->tubeNames[$name]);
   }
 
   /**
@@ -182,7 +242,7 @@ class BeanstalkdServer {
    */
   public function flushTube($name) {
     // Do not do anything on tube not controlled by this instance.
-    if (!isset($this->queueNames[$name])) {
+    if (!isset($this->tubeNames[$name])) {
       return;
     }
 
@@ -225,7 +285,7 @@ class BeanstalkdServer {
    */
   public function getTubeItemCount($name) {
     // Do not do anything on tube not controlled by this instance.
-    if (!isset($this->queueNames[$name])) {
+    if (!isset($this->tubeNames[$name])) {
       return 0;
     }
 

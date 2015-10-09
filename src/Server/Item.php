@@ -1,51 +1,44 @@
 <?php
+
 /**
  * @file
- * Containts Item.
+ * Contains Item.
  */
 
 namespace Drupal\beanstalkd\Server;
 
-use Pheanstalk\Exception\ClientException;
-
 /**
- * Class Item contains job data as passed to Pheanstalk.
+ * Class Item is a strongly typed implementation of the Queue API stdClass item.
  */
 class Item {
-
-  protected $isSerialized = FALSE;
-
-  protected $data;
+  /**
+   * The same as what what passed into createItem().
+   *
+   * @var mixed
+   *
+   * @see \Drupal\Core\Queue\QueueInterface::claimItem()
+   */
+  public $data;
 
   /**
-   * Constructor.
+   * The unique ID returned from createItem().
    *
-   * @param mixed $data
-   *   The data to pass as workload.
+   * @var int
    *
-   * @throws \Pheanstalk\Exception\ClientException
-   *   If the data cannot be serialized.
+   * @see \Drupal\Core\Queue\QueueInterface::claimItem()
+   *
+   * Name does not honor standard naming conventions, because it is required by
+   * the QueueInterface::claimItem() specification.
    */
-  public function __construct($data) {
-    if (is_scalar($data)) {
-      $this->data = $data;
-    }
-    else {
-      try {
-        $this->data = serialize($data);
-        $this->isSerialized = TRUE;
-      }
-      catch (\Exception $pokemon) {
-        throw new ClientException('Item cannot be serialized, so it cannot be passed to Beanstalkd');
-      }
-    }
-  }
+  public $item_id;
 
   /**
-   * {@inheritdoc}
+   * Timestamp when the item was put into the queue.
+   *
+   * @var int
+   *
+   * @see \Drupal\Core\Queue\QueueInterface::claimItem()
    */
-  public function __toString() {
-    return '' . $this->data;
-  }
+  public $created;
 
 }
