@@ -8,7 +8,7 @@
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 
 /**
- * Implements hook_menu()
+ * Implements hook_menu().
  */
 function beanstalkd_menu() {
   $items = array();
@@ -24,7 +24,7 @@ function beanstalkd_menu() {
 
 
 /**
- * Implements hook_permission()
+ * Implements hook_permission().
  */
 function beanstalkd_permission() {
   return array(
@@ -37,54 +37,7 @@ function beanstalkd_permission() {
 }
 
 /**
- * Implements hook_libraries_info().
- */
-function beanstalkd_libraries_info() {
-  $info = array();
-
-  $info['pheanstalk'] = array(
-    'name' => t('Pheanstalk'),
-    'vendor url' => 'https://github.com/pda/pheanstalk',
-    'download url' => 'https://github.com/pda/pheanstalk/tags',
-    'path' => 'classes',
-    'version arguments' => array(
-      'file' => 'classes/Pheanstalk/Pheanstalk.php',
-      'pattern' => '/VERSION\s+=\s+\'(\d+\.\d+\.\d+)\';/',
-      'lines' => 20,
-      'cols' => 255,
-    ),
-    'files' => array(
-      'php' => array('Pheanstalk/PheanstalkInterface.php'),
-    ),
-    'callbacks' => array(
-      'post-load' => array('beanstalkd_init_phpeanstalk'),
-    ),
-  );
-
-  return $info;
-}
-
-function beanstalkd_init_phpeanstalk($library) {
-  if ($library['loaded']) {
-    drupal_classloader()->add('Pheanstalk', DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
-  }
-}
-
-/**
- * Load the pheanstalk library.
- */
-function beanstalkd_load_pheanstalk() {
-  $library = libraries_load('pheanstalk');
-
-  if (!$library['loaded']) {
-    throw new Exception('Unable to load Pheanstalk library');
-  }
-
-  return TRUE;
-}
-
-/**
- * Get Queue Parameters
+ * Get Queue Parameters.
  */
 function beanstalkd_get_queue_options($name) {
   static $options = array();
@@ -112,13 +65,13 @@ function beanstalkd_get_queue_options($name) {
 /**
  * Get a list of all queues which have drush enabled.
  *
- * @param $host
- *  The list of all the queue which are using this specified host
+ * @param string $host
+ *   The list of all the queue which are using this specified host
  *
- * @return
- *  If a host is specified then it returns an array of all the settings for the queue.
- *  otherwise if no host is specified then it will return an array keyed by host for all
- *  with the settings for all queues.
+ * @return array
+ *   If a host is specified then it returns an array of all the settings for the queue.
+ *   otherwise if no host is specified then it will return an array keyed by host for all
+ *   with the settings for all queues.
  */
 function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   static $queue_list;
@@ -154,6 +107,9 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   return $queue_list;
 }
 
+/**
+ * Get beanstalkd queues.
+ */
 function beanstalkd_get_queues($hostname = NULL) {
   $queues = beanstalkd_get_host_queues($hostname);
 

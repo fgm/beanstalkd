@@ -1,0 +1,14 @@
+{
+    "name": "drupal/beanstalkd",
+    "description": "Client for using the beanstalkd queue system to manage selected drupal queues",
+    "require": {
+        "pda/pheanstalk": "~2.0"
+    },
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "Gordon Heydon",
+            "email": "gordon@heydon.com.au"
+        }
+    ]
+}
