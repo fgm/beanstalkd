@@ -194,15 +194,13 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
   /**
    * Claim an item in the queue for processing.
    *
-   * @param int $lease_time
-   *   How long the processing is expected to take in seconds, defaults to an
-   *   hour. After this lease expires, the item will be reset and another
-   *   consumer can claim the item. For idempotent tasks (which can be run
-   *   multiple times without side effects), shorter lease times would result
-   *   in lower latency in case a consumer fails. For tasks that should not be
-   *   run more than once (non-idempotent), a larger lease time will make it
-   *   more rare for a given task to run multiple times in cases of failure,
-   *   at the cost of higher latency.
+   * @param int $reserve_timeout
+   *   How long the worker will wait to reserve a job before beanstalkd
+   *   releases the worker. A worker released by timeout will not have a job
+   *   to return (obviously), in which case this method will return FALSE.
+   *   Passing NULL will cause the worker to block indefinitely (without
+   *   timeout). Passing 0 will cause the worker to check for a job then
+   *   immediately return if one is not available.
    *
    * @return object|FALSE
    *   On success we return an item object. If the queue is unable to claim an
@@ -210,12 +208,12 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    *   and either the queue is empty or there is some other non-recoverable
    *   problem.
    */
-  public function claimItem($lease_time = 3600) {
+  public function claimItem($reserve_timeout = NULL) {
     if (!$this->beanstalkd_queue) {
       return FALSE;
     }
 
-    $jobs = $this->reserve(0);
+    $jobs = $this->reserve($reserve_timeout);
     if (!empty($jobs)) {
       // We should only ever get one job, but if we have somehow reserved more
       // than 1, the additional jobs will timeout and get put back onto the
