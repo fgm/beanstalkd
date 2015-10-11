@@ -14,53 +14,62 @@ function beanstalkd_requirements($phase) {
 
   if ($phase == 'runtime') {
 
-    try {
-      $queue = new BeanstalkdQueue(NULL, TRUE);
+    $requirements['beanstalkd_pheanstalk_path'] = array(
+      'title' => $t('Beanstalkd Pheanstalk'),
+      'value' => class_exists("Pheanstalk_Pheanstalk") ? $t('Installed') : $t('Not found. See <a href="https://www.drupal.org/node/2405805">Composer Manager</a> documentation on how to install Pheanstalkd'),
+      'severity' => class_exists("Pheanstalk_Pheanstalk") ? REQUIREMENT_INFO : REQUIREMENT_ERROR,
+      'description' => $t('Pheanstalk is a pure PHP 5.2+ client for the <a href="http://kr.github.io/beanstalkd/">beanstalkd workqueue</a> and provides the connection class to allow Drupal to talk to the beanstalkd daemon. See <a href="https://github.com/pda/pheanstalk">https://github.com/pda/pheanstalk</a> for more information about Pheanstalk.'),
+    );
 
-      $requirements['beanstalkd_queue_count'] = array(
-        'title' => $t('Beanstalkd Queue count'),
-        'value' => $queue->numberOfItems(),
-        'severity' => REQUIREMENT_INFO,
-        'description' => $t('Provides a count of all the number of items that are currently ready to be processed on the queue'),
-      );
+    if (class_exists("Pheanstalk_Pheanstalk")) {
+      try {
+        $queue = new BeanstalkdQueue(NULL, TRUE);
 
-      if ($e = $queue->getError()) {
+        $requirements['beanstalkd_queue_count'] = array(
+          'title' => $t('Beanstalkd Queue count'),
+          'value' => $queue->numberOfItems(),
+          'severity' => REQUIREMENT_INFO,
+          'description' => $t('Provides a count of all the number of items that are currently ready to be processed on the queue'),
+        );
+
+        if ($e = $queue->getError()) {
+          $requirements['beanstalkd_last_error'] = array(
+            'title' => $t('Beanstalkd Queue count error'),
+            'value' => $t('%message in %file on line %line.', array(
+              '%error' => $e->getCode(),
+              '%message' => $e->getMessage(),
+              '%file' => $e->getFile(),
+              '%line' => $e->getLine(),
+            )),
+            'severity' => REQUIREMENT_ERROR,
+            'description' => $t('An error has occurred while getting the current number of in the queue.'),
+          );
+        }
+      }
+      catch (Pheanstalk_Exception_ConnectionException $e) {
         $requirements['beanstalkd_last_error'] = array(
-          'title' => $t('Beanstalkd Queue count error'),
-          'value' => $t('%message in %file on line %line.', array(
-            '%error' => $e->getCode(),
-            '%message' => $e->getMessage(),
-            '%file' => $e->getFile(),
-            '%line' => $e->getLine(),
-          )),
+          'title' => $t('Beanstalkd Queue error'),
+          'value' => $e->getMessage(),
           'severity' => REQUIREMENT_ERROR,
-          'description' => $t('An error has occurred while getting the current number of in the queue.'),
+          'description' => $t('An error has occurred while communicating with beanstalkd'),
         );
       }
-    }
-    catch (Pheanstalk_Exception_ConnectionException $e) {
-      $requirements['beanstalkd_last_error'] = array(
-        'title' => $t('Beanstalkd Queue error'),
-        'value' => $e->getMessage(),
-        'severity' => REQUIREMENT_ERROR,
-        'description' => $t('An error has occurred while communicating with beanstalkd'),
-      );
-    }
-    catch (Pheanstalk_Exception $e) {
-      $requirements['beanstalkd_last_error'] = array(
-        'title' => $t('Beanstalkd Queue error'),
-        'value' => '(' . get_class($e) . ') ' . $e->getMessage(),
-        'severity' => REQUIREMENT_ERROR,
-        'description' => $t('An error has occurred with PHPBeanstalk'),
-      );
-    }
-    catch (Exception $e) {
-      $requirements['beanstalkd_last_error'] = array(
-        'title' => $t('Beanstalkd Queue error'),
-        'value' => '(' . get_class($e) . ') ' . $e->getMessage(),
-        'severity' => REQUIREMENT_ERROR,
-        'description' => $t('An error has occurred.'),
-      );
+      catch (Pheanstalk_Exception $e) {
+        $requirements['beanstalkd_last_error'] = array(
+          'title' => $t('Beanstalkd Queue error'),
+          'value' => '(' . get_class($e) . ') ' . $e->getMessage(),
+          'severity' => REQUIREMENT_ERROR,
+          'description' => $t('An error has occurred with PHPBeanstalk'),
+        );
+      }
+      catch (Exception $e) {
+        $requirements['beanstalkd_last_error'] = array(
+          'title' => $t('Beanstalkd Queue error'),
+          'value' => '(' . get_class($e) . ') ' . $e->getMessage(),
+          'severity' => REQUIREMENT_ERROR,
+          'description' => $t('An error has occurred.'),
+        );
+      }
     }
   }
 
