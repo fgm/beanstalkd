@@ -5,6 +5,7 @@
  * Provide core implementation of beanstalkd support for Queues
  */
 
+use Pheanstalk\PheanstalkInterface;
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 
 /**
@@ -49,12 +50,12 @@ function beanstalkd_get_queue_options($name) {
       'port' => settings()->get('beanstalkd_port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT),
       'fork' => FALSE,
       'reserve_timeout' => 0,
-      'ttr' => \Pheanstalk_PheanstalkInterface::DEFAULT_TTR,
-      'priority' => \Pheanstalk_PheanstalkInterface::DEFAULT_PRIORITY,
-      'release_delay' => \Pheanstalk_PheanstalkInterface::DEFAULT_DELAY,
+      'ttr' => PheanstalkInterface::DEFAULT_TTR,
+      'priority' => PheanstalkInterface::DEFAULT_PRIORITY,
+      'release_delay' => PheanstalkInterface::DEFAULT_DELAY,
       'forked_extra_timeout' => FALSE,
       'forked_extra_items' => FALSE,
-      'delay' => \Pheanstalk_PheanstalkInterface::DEFAULT_DELAY,
+      'delay' => PheanstalkInterface::DEFAULT_DELAY,
     );
     $options[$name] += $defaults;
   }
