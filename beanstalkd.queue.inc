@@ -5,6 +5,8 @@
  * Implements the Beanstalkd Queue class.
  */
 
+use Pheanstalk\Pheanstalk;
+
 class BeanstalkdQueue implements DrupalReliableQueueInterface {
   protected $tube;
   /**
@@ -127,7 +129,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
       }
 
       foreach ($ret as $id => $object) {
-        if (is_object($object) && is_a($object, 'Pheanstalk_Job')) {
+        if (is_object($object) && is_a($object, 'Pheanstalk\Job')) {
           $item = unserialize($object->getData());
           $item->id = $object->getId();
           $item->beanstalkd_job = $object;
@@ -282,7 +284,7 @@ class BeanstalkdQueue implements DrupalReliableQueueInterface {
    * Create connection to a queue.
    */
   public function createConnection($host, $port) {
-    $this->beanstalkd_queue = new Pheanstalk_Pheanstalk($host, $port);
+    $this->beanstalkd_queue = new Pheanstalk($host, $port);
   }
 
   /**

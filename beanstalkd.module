@@ -5,6 +5,8 @@
  * Provide core implementation of beanstalkd support for Queues
  */
 
+use Pheanstalk\PheanstalkInterface;
+
 /**
  * Implements hook_menu().
  */
@@ -46,15 +48,15 @@ function beanstalkd_get_queue_options($name) {
     $options[$name] = variable_get('beanstalk_queue_' . $name, array());
     $defaults = variable_get('beanstalk_default_queue', array()) + array(
       'host' => variable_get('beanstalkd_host', 'localhost'),
-      'port' => variable_get('beanstalkd_port', Pheanstalk_Pheanstalk::DEFAULT_PORT),
+      'port' => variable_get('beanstalkd_port', PheanstalkInterface::DEFAULT_PORT),
       'fork' => FALSE,
       'reserve_timeout' => 0,
-      'ttr' => Pheanstalk_Pheanstalk::DEFAULT_TTR,
-      'priority' => Pheanstalk_Pheanstalk::DEFAULT_PRIORITY,
-      'release_delay' => Pheanstalk_Pheanstalk::DEFAULT_DELAY,
+      'ttr' => PheanstalkInterface::DEFAULT_TTR,
+      'priority' => PheanstalkInterface::DEFAULT_PRIORITY,
+      'release_delay' => PheanstalkInterface::DEFAULT_DELAY,
       'forked_extra_timeout' => FALSE,
       'forked_extra_items' => FALSE,
-      'delay' => Pheanstalk_Pheanstalk::DEFAULT_DELAY,
+      'delay' => PheanstalkInterface::DEFAULT_DELAY,
     );
     $options[$name] += $defaults;
   }

@@ -16,12 +16,12 @@ function beanstalkd_requirements($phase) {
 
     $requirements['beanstalkd_pheanstalk_path'] = array(
       'title' => $t('Beanstalkd Pheanstalk'),
-      'value' => class_exists("Pheanstalk_Pheanstalk") ? $t('Installed') : $t('Not found. See <a href="https://www.drupal.org/node/2405805">Composer Manager</a> documentation on how to install Pheanstalkd'),
-      'severity' => class_exists("Pheanstalk_Pheanstalk") ? REQUIREMENT_INFO : REQUIREMENT_ERROR,
+      'value' => class_exists("Pheanstalk\Pheanstalk") ? $t('Installed') : $t('Not found. See <a href="https://www.drupal.org/node/2405805">Composer Manager</a> documentation on how to install Pheanstalkd'),
+      'severity' => class_exists("Pheanstalk\Pheanstalk") ? REQUIREMENT_INFO : REQUIREMENT_ERROR,
       'description' => $t('Pheanstalk is a pure PHP 5.2+ client for the <a href="http://kr.github.io/beanstalkd/">beanstalkd workqueue</a> and provides the connection class to allow Drupal to talk to the beanstalkd daemon. See <a href="https://github.com/pda/pheanstalk">https://github.com/pda/pheanstalk</a> for more information about Pheanstalk.'),
     );
 
-    if (class_exists("Pheanstalk_Pheanstalk")) {
+    if (class_exists("Pheanstalk\Pheanstalk")) {
       try {
         $queue = new BeanstalkdQueue(NULL, TRUE);
 

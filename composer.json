@@ -2,7 +2,7 @@
     "name": "drupal/beanstalkd",
     "description": "Client for using the beanstalkd queue system to manage selected drupal queues",
     "require": {
-        "pda/pheanstalk": "~2.0"
+        "pda/pheanstalk": "~3.1.0"
     },
     "license": "GPL",
     "authors": [
