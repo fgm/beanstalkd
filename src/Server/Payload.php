@@ -13,6 +13,8 @@ use Pheanstalk\Exception\ClientException;
  *
  * It may also contain instructions telling the server to submit the data with
  * specific options, like a delay, priority or time to run.
+ *
+ * @see Drupal\beanstalkd\Server\Item
  */
 class Payload {
 

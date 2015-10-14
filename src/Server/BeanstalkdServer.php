@@ -31,6 +31,8 @@ class BeanstalkdServer {
    */
   const DEFAULT_CLAIM_TIMEOUT = 3600;
 
+  const TUBE_STATS_CURRENT_PREFIX = 'current-jobs-';
+
   /**
    * The wrapped Pheanstalk.
    *
@@ -139,11 +141,11 @@ class BeanstalkdServer {
    * @param string $name
    *   The tube name.
    * @param \Pheanstalk\Job $job
-   *   A jobobtained from claimItem().
+   *   A job obtained from claimItem().
    */
   public function releaseItem($name, Job $job) {
-    // Do not do anything on tube not controlled by this instance.
-    if (!isset($this->tubeNames[$name])) {
+    // Do not do anything on invalid job, or tube not controlled.
+    if ($job->getId() <= 0 || !isset($this->tubeNames[$name])) {
       return;
     }
 
@@ -290,14 +292,48 @@ class BeanstalkdServer {
     }
 
     $count = 0;
-    $stats = $this->driver->statsTube($name);
+    try {
+      $stats = $this->driver->statsTube($name);
+    }
+    catch (ServerException $e) {
+      $stats = [];
+      foreach (static::JOB_STATES as $state) {
+        $stats[static::TUBE_STATS_CURRENT_PREFIX . $state] = 0;
+      }
+    }
+
     foreach (static::JOB_STATES as $state) {
       $state_name = strtolower($state);
-      $key = 'current-jobs-' . $state_name;
+      $key = static::TUBE_STATS_CURRENT_PREFIX . $state_name;
       $count += $stats[$key];
     }
 
     return $count;
+  }
+
+  /**
+   * Return the Beanstalkd metadata for a job.
+   *
+   * @param \Pheanstalk\Job $job
+   *   A job returned by BeanstalkdServer::claimItem().
+   *
+   * @return false|\Pheanstalk\Response\ArrayResponse
+   *   The statistics about the job, or false if it could not be found.
+   */
+  public function statsJob($name, Job $job) {
+    // Do not do anything on tube not controlled by this instance.
+    if (!isset($this->tubeNames[$name])) {
+      return 0;
+    }
+
+    try {
+      $stats = $this->driver->statsJob($job);
+    }
+    catch (ServerException $e) {
+      $stats = FALSE;
+    }
+
+    return $stats;
   }
 
 }

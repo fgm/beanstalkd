@@ -144,4 +144,37 @@ class BeanstalkdServerFactory {
     return $this->instances[$alias];
   }
 
+  /**
+   * Return the alias of the server mapped to a queue.
+   *
+   * @param string $name
+   *   The queue name.
+   *
+   * @return string
+   *   The server alias.
+   */
+  protected function getQueueMapping($name) {
+    $alias = isset($this->mappings[$name])
+      ? $this->mappings[$name]
+      : static::DEFAULT_SERVER_ALIAS;
+
+    return $alias;
+  }
+
+  /**
+   * Return the BeanstalkServer instance for a queue name.
+   *
+   * This is the method most likely to be useful, because it is mapping-aware.
+   *
+   * @param string $name
+   *   The name of the queue.
+   *
+   * @return \Drupal\beanstalkd\Server\BeanstalkdServer
+   *   The mapped server instance for that queue.
+   */
+  public function getQueueServer($name) {
+    $alias = $this->getQueueMapping($name);
+    $server = $this->get($alias);
+    return $server;
+  }
 }

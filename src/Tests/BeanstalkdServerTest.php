@@ -7,9 +7,6 @@
 
 namespace Drupal\beanstalkd\Tests;
 
-use Drupal\beanstalkd\Server\BeanstalkdServer;
-use Drupal\Tests\libraries\Kernel\KernelTestBase;
-use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Pheanstalk\Job;
 
 /**
@@ -17,52 +14,7 @@ use Pheanstalk\Job;
  *
  * @group Beanstalkd
  */
-class BeanstalkdServerTest extends KernelTestBase {
-
-  public static $modules = ['beanstalkd'];
-
-  /**
-   * Server factory.
-   *
-   * @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory
-   */
-  protected $serverFactory;
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setUp() {
-    parent::setUp();
-    $this->serverFactory = $this->container->get('beanstalkd.server.factory');
-  }
-
-  /**
-   * Initialize a server and tube.
-   *
-   * @return array
-   *   - server instance
-   *   - tube name
-   *   - initial count of items in the tube.
-   */
-  protected function initServerWithTube() {
-    $tube = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME;
-    $server = $this->serverFactory->get(BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
-    $server->addTube($tube);
-    $start_count = $server->getTubeItemCount($tube);
-    return [$server, $tube, $start_count];
-  }
-
-  /**
-   * Clean up after a test.
-   *
-   * @param \Drupal\beanstalkd\Server\BeanstalkdServer $server
-   *   The server to cleanup.
-   * @param string $tube
-   *   The name of the tube to cleanup.
-   */
-  protected function cleanUp(BeanstalkdServer $server, $tube) {
-    $server->removeTube($tube);
-  }
+class BeanstalkdServerTest extends BeanstalkdTestBase {
 
   /**
    * Test creating an item on an un-managed queue.
@@ -86,6 +38,7 @@ class BeanstalkdServerTest extends KernelTestBase {
    * Test item deletion.
    */
   public function testDelete() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkServer $server */
     list($server, $tube, $start_count) = $this->initServerWithTube();
 
     // Avoid any "ground-effect" during tests with counts near 0.

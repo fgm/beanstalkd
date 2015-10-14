@@ -3,8 +3,10 @@ services:
     class: Drupal\beanstalkd\Server\BeanstalkdServerFactory
     arguments: ['@settings']
 
+  # Name is defined by core usage, else it would be beanstalkd.queue.factory.
   queue.beanstalkd:
-    class: Drupal\beanstalkd\Queue\QueueBeanstalkdFactory
+    class: Drupal\beanstalkd\Queue\BeanstalkdQueueFactory
+    arguments: ['@beanstalkd.server.factory']
 
   beanstalkd.worker_manager:
     class: Drupal\beanstalkd\WorkerManager

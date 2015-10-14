@@ -9,6 +9,11 @@ namespace Drupal\beanstalkd\Server;
 
 /**
  * Class Item is a strongly typed implementation of the Queue API stdClass item.
+ *
+ * As such is bundles the actual item payload, along with QueueAPI-specific
+ * properties.
+ *
+ * @see \Drupal\beanstalkd\Server\Payload
  */
 class Item {
   /**
@@ -41,4 +46,19 @@ class Item {
    */
   public $created;
 
+  /**
+   * Constructor.
+   *
+   * @param int $item_id
+   *   The Pheanstalk job id, used as the item id.
+   * @param mixed $data
+   *   The job data: raw or Payload.
+   * @param int $created
+   *   The timestamp at which the job was put in the queue.
+   */
+  public function __construct($item_id, $data, $created) {
+    $this->item_id = $item_id;
+    $this->data = $data;
+    $this->created = $created;
+  }
 }
