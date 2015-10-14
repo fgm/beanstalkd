@@ -11,6 +11,9 @@ use Drupal\beanstalkd\Server\BeanstalkdServer;
 use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\KernelTests\KernelTestBase;
 
+/**
+ * Class BeanstalkdTestBase is a base class for Beanstalkd tests.
+ */
 abstract class BeanstalkdTestBase extends KernelTestBase {
 
   public static $modules = ['beanstalkd'];

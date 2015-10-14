@@ -20,6 +20,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    * Test creating an item on an un-managed queue.
    */
   public function testCreateSad() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube, $start_count) = $this->initServerWithTube();
     $server->releaseTube($tube);
 
@@ -38,7 +39,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    * Test item deletion.
    */
   public function testDelete() {
-    /* @var \Drupal\beanstalkd\Server\BeanstalkServer $server */
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube, $start_count) = $this->initServerWithTube();
 
     // Avoid any "ground-effect" during tests with counts near 0.
@@ -69,6 +70,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    * Tests tube flushing.
    */
   public function testFlush() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube,) = $this->initServerWithTube();
     $item = 'foo';
     $server->putData($tube, $item);
@@ -86,6 +88,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    * Tests flushing an un-managed queue: should not error, and should return 0.
    */
   public function testFlushSad() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube, $start_count) = $this->initServerWithTube();
     $server->putData($tube, 'foo');
 
@@ -95,16 +98,16 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     $server->releaseTube($tube);
 
-    // Flush should pretend to succeed on a unmanaged queue.
+    // Flush should pretend to succeed on a un-managed queue.
     $server->flushTube($tube);
     $actual = $server->getTubeItemCount($tube);
-    $this->assertEquals(0, $actual, 'Tube is shown as empty after flushing an unmanaged tube');
+    $this->assertEquals(0, $actual, 'Tube is shown as empty after flushing an un-managed tube');
 
     // But it should not actually have performed a flush.
     $server->addTube($tube);
     $actual = $server->getTubeItemCount($tube);
     $expected = $start_count + 1;
-    $this->assertEquals($expected, $actual, 'Tube is actually not empty after flushing an unmanaged tube.');
+    $this->assertEquals($expected, $actual, 'Tube is actually not empty after flushing an un-managed tube.');
 
     $this->cleanUp($server, $tube);
   }
@@ -113,6 +116,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    * Test item release.
    */
   public function testRelease() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube, $start_count) = $this->initServerWithTube();
     $server->putData($tube, 'foo');
     $actual = $server->getTubeItemCount($tube);
@@ -141,6 +145,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    * Test item release sad: releaseJob() on a un-managed queue does nothing.
    */
   public function testReleaseSad() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube, $start_count) = $this->initServerWithTube();
     $item = 'foo';
     $server->putData($tube, $item);

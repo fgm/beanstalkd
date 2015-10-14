@@ -7,12 +7,7 @@
 namespace Drupal\beanstalkd\Tests;
 
 use Drupal\beanstalkd\Queue\BeanstalkdQueue;
-use Drupal\beanstalkd\Queue\BeanstalkdQueueFactory;
-use Drupal\beanstalkd\Server\BeanstalkdServer;
 use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
-use Drupal\Core\Queue\QueueInterface;
-use Drupal\Core\Site\Settings;
-use Drupal\Tests\libraries\Kernel\KernelTestBase;
 
 /**
  * Class BeanstalkdQueueTest.
@@ -22,11 +17,15 @@ use Drupal\Tests\libraries\Kernel\KernelTestBase;
 class BeanstalkdQueueTest extends BeanstalkdTestBase {
 
   /**
-   * @var \Drupal\Core\Queue\QueueInterface
+   * The default queue, handled by Beanstalkd.
+   *
+   * @var \Drupal\beanstalkd\Queue\BeanstalkdQueue
    */
   protected $queue;
 
   /**
+   * The queue factory service.
+   *
    * @var \Drupal\Core\Queue\QueueFactory
    */
   protected $queueFactory;
@@ -43,8 +42,11 @@ class BeanstalkdQueueTest extends BeanstalkdTestBase {
     $this->assertTrue($this->queue instanceof BeanstalkdQueue, "Queue API settings point to Beanstalkd");
   }
 
+  /**
+   * Test queue registration.
+   */
   public function testCreateQueue() {
-    list($server, $tube, $start_count) = $this->initServerWithTube();
+    $this->initServerWithTube();
   }
 
 }

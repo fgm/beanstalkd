@@ -314,6 +314,8 @@ class BeanstalkdServer {
   /**
    * Return the Beanstalkd metadata for a job.
    *
+   * @param string $name
+   *   The name of the queue in which the job is to be found.
    * @param \Pheanstalk\Job $job
    *   A job returned by BeanstalkdServer::claimJob().
    *
@@ -327,6 +329,7 @@ class BeanstalkdServer {
     }
 
     try {
+      /* @var \Pheanstalk\Response\ArrayResponse $stats */
       $stats = $this->driver->statsJob($job);
     }
     catch (ServerException $e) {
