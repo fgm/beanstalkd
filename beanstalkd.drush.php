@@ -5,8 +5,8 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 use Drupal\Component\Utility\Unicode;
+use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 
 /**
  * Implements hook_drush_command().
@@ -422,9 +422,9 @@ function drush_beanstalkd_peek_items($type, $name) {
 /**
  * Callback for array_filter() in drush_beanstalkd_{kick|_peek_items}().
  *
- * @param string $a
+ * @param string $name
  *   A queue name.
- * @param mixed $b
+ * @param string|null $type_filter
  *   Unused.
  * @param bool $init
  *   - NULL if $init,
@@ -434,17 +434,17 @@ function drush_beanstalkd_peek_items($type, $name) {
  * @return bool|null
  *   As per array_filter().
  */
-function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
+function _drush_beanstalkd_filter_type($name, $type_filter = NULL, $init = FALSE) {
   static $queue, $type;
 
   if ($init) {
-    $queue = $a;
-    $type = $b;
+    $queue = $name;
+    $type = $type_filter;
     return NULL;
   }
 
   try {
-    $stats = $queue->statsTube($a);
+    $stats = $queue->statsTube($name);
     return $stats['current-jobs-' . $type] > 0 ? TRUE : FALSE;
   }
   catch (\Exception $e) {

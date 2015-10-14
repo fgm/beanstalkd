@@ -325,7 +325,7 @@ class BeanstalkdServer {
   public function statsJob($name, Job $job) {
     // Do not do anything on tube not controlled by this instance.
     if (!isset($this->tubeNames[$name])) {
-      return 0;
+      return FALSE;
     }
 
     try {

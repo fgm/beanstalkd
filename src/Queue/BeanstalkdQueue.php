@@ -6,9 +6,9 @@
 
 namespace Drupal\beanstalkd\Queue;
 
+use Drupal\Core\Queue\QueueInterface;
 use Drupal\beanstalkd\Server\BeanstalkdServer;
 use Drupal\beanstalkd\Server\Item;
-use Drupal\Core\Queue\QueueInterface;
 
 /**
  * Class BeanstalkdQueue is a QueueInterface implementation for Beanstalkd.
@@ -65,6 +65,10 @@ class BeanstalkdQueue implements QueueInterface {
     // @TODO Implement specific handling for jobs containing a Payload object,
     // like the ability for $lease_time to interact with TTR.
     $job = $this->server->claimJob($this->name);
+    if ($job === FALSE) {
+      return FALSE;
+    }
+
     $stats = $this->server->statsJob($this->name, $job);
 
     // Return the Epoch if age is unknown, to ensure "created" will be 0..
@@ -80,7 +84,7 @@ class BeanstalkdQueue implements QueueInterface {
    */
   public function deleteItem($item) {
     if (!isset($item->id)) {
-      throw new \InvalidArgumentException("Item to delete does not appear to come from claimItem().");
+      throw new \InvalidArgumentException('Item to delete does not appear to come from claimItem().');
     }
 
     $this->server->deleteJob($this->name, $item->id);
@@ -91,7 +95,7 @@ class BeanstalkdQueue implements QueueInterface {
    */
   public function releaseItem($item) {
     if (!isset($item->id)) {
-      throw new \InvalidArgumentException("Item to release does not appear to come from claimItem().");
+      throw new \InvalidArgumentException('Item to release does not appear to come from claimItem().');
     }
 
     $this->server->releaseJob($this->name, $item->id);

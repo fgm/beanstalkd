@@ -127,16 +127,18 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
     $job = $server->claimJob($tube);
     $this->assertTrue(is_object($job) && $job instanceof Job, 'claimJob returns a Job');
 
-    // Claiming an item removes it from the visible count.
-    $actual = $server->getTubeItemCount($tube);
-    $expected = $start_count;
-    $this->assertEquals($expected, $actual);
+    if (is_object($job) && $job instanceof Job) {
+      // Claiming an item removes it from the visible count.
+      $actual = $server->getTubeItemCount($tube);
+      $expected = $start_count;
+      $this->assertEquals($expected, $actual);
 
-    // Releasing it makes it available again.
-    $server->releaseJob($tube, $job);
-    $actual = $server->getTubeItemCount($tube);
-    $expected = $start_count + 1;
-    $this->assertEquals($expected, $actual);
+      // Releasing it makes it available again.
+      $server->releaseJob($tube, $job);
+      $actual = $server->getTubeItemCount($tube);
+      $expected = $start_count + 1;
+      $this->assertEquals($expected, $actual);
+    }
 
     $this->cleanUp($server, $tube);
   }
@@ -170,7 +172,9 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     // Releasing it does not makes it available if the queue is not managed.
     $server->releaseTube($tube);
-    $server->releaseJob($tube, $job);
+    if (is_object($job) && $job instanceof Job) {
+      $server->releaseJob($tube, $job);
+    }
     // Queue is re-handled to get the actual available count.
     $server->addTube($tube);
     $actual = $server->getTubeItemCount($tube);

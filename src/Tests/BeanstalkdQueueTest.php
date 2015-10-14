@@ -39,7 +39,7 @@ class BeanstalkdQueueTest extends BeanstalkdTestBase {
     $queue_factory = $this->container->get('queue');
     $this->queueFactory = $queue_factory;
     $this->queue = $this->queueFactory->get(BeanstalkdServerFactory::DEFAULT_QUEUE_NAME);
-    $this->assertTrue($this->queue instanceof BeanstalkdQueue, "Queue API settings point to Beanstalkd");
+    $this->assertTrue($this->queue instanceof BeanstalkdQueue, 'Queue API settings point to Beanstalkd');
   }
 
   /**
