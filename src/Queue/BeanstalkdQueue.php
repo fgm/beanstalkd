@@ -47,7 +47,7 @@ class BeanstalkdQueue implements QueueInterface {
    * {@inheritdoc}
    */
   public function createItem($data) {
-    $this->server->createItem($this->name, $data);
+    $this->server->putData($this->name, $data);
   }
 
   /**
@@ -64,7 +64,7 @@ class BeanstalkdQueue implements QueueInterface {
   public function claimItem($lease_time = 3600) {
     // @TODO Implement specific handling for jobs containing a Payload object,
     // like the ability for $lease_time to interact with TTR.
-    $job = $this->server->claimItem($this->name);
+    $job = $this->server->claimJob($this->name);
     $stats = $this->server->statsJob($this->name, $job);
 
     // Return the Epoch if age is unknown, to ensure "created" will be 0..
@@ -83,7 +83,7 @@ class BeanstalkdQueue implements QueueInterface {
       throw new \InvalidArgumentException("Item to delete does not appear to come from claimItem().");
     }
 
-    $this->server->deleteItem($this->name, $item->id);
+    $this->server->deleteJob($this->name, $item->id);
   }
 
   /**
@@ -94,7 +94,7 @@ class BeanstalkdQueue implements QueueInterface {
       throw new \InvalidArgumentException("Item to release does not appear to come from claimItem().");
     }
 
-    $this->server->releaseItem($this->name, $item->id);
+    $this->server->releaseJob($this->name, $item->id);
   }
 
   /**

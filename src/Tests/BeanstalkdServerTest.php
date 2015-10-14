@@ -23,7 +23,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
     list($server, $tube, $start_count) = $this->initServerWithTube();
     $server->releaseTube($tube);
 
-    $job_id = $server->createItem($tube, 'foo');
+    $job_id = $server->putData($tube, 'foo');
     $this->assertEquals(0, $job_id, 'Creating an item in an unhandled queue does not return a valid job id.');
 
     $server->addTube($tube);
@@ -46,7 +46,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     $job_id = 0;
     for ($i = 0; $i < $create_count; $i++) {
-      $job_id = $server->createItem($tube, 'foo' . $i);
+      $job_id = $server->putData($tube, 'foo' . $i);
     }
 
     $expected = $start_count + $create_count;
@@ -54,10 +54,10 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
     $this->assertEquals($expected, $actual);
 
     // This should not do anything, since the queue name is incorrect.
-    $server->deleteItem($tube . $tube, $job_id);
+    $server->deleteJob($tube . $tube, $job_id);
     $this->assertEquals($expected, $actual);
 
-    $server->deleteItem($tube, $job_id);
+    $server->deleteJob($tube, $job_id);
     $expected = $start_count + $create_count - 1;
     $actual = $server->getTubeItemCount($tube);
     $this->assertEquals($expected, $actual, 'Deletion actually deletes jobs.');
@@ -71,7 +71,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
   public function testFlush() {
     list($server, $tube,) = $this->initServerWithTube();
     $item = 'foo';
-    $server->createItem($tube, $item);
+    $server->putData($tube, $item);
     $server->flushTube($tube);
     $actual = $server->getTubeItemCount($tube);
     $this->assertEquals(0, $actual, 'Tube is empty after flushTube');
@@ -87,7 +87,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    */
   public function testFlushSad() {
     list($server, $tube, $start_count) = $this->initServerWithTube();
-    $server->createItem($tube, 'foo');
+    $server->putData($tube, 'foo');
 
     $actual = $server->getTubeItemCount($tube);
     $expected = $start_count + 1;
@@ -114,14 +114,14 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
    */
   public function testRelease() {
     list($server, $tube, $start_count) = $this->initServerWithTube();
-    $server->createItem($tube, 'foo');
+    $server->putData($tube, 'foo');
     $actual = $server->getTubeItemCount($tube);
     $expected = $start_count + 1;
     $this->assertEquals($expected, $actual);
 
     // Just-submitted job should be present.
-    $job = $server->claimItem($tube);
-    $this->assertTrue(is_object($job) && $job instanceof Job, 'ClaimItem returns a Job');
+    $job = $server->claimJob($tube);
+    $this->assertTrue(is_object($job) && $job instanceof Job, 'claimJob returns a Job');
 
     // Claiming an item removes it from the visible count.
     $actual = $server->getTubeItemCount($tube);
@@ -129,7 +129,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
     $this->assertEquals($expected, $actual);
 
     // Releasing it makes it available again.
-    $server->releaseItem($tube, $job);
+    $server->releaseJob($tube, $job);
     $actual = $server->getTubeItemCount($tube);
     $expected = $start_count + 1;
     $this->assertEquals($expected, $actual);
@@ -138,25 +138,25 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
   }
 
   /**
-   * Test item release sad: releaseItem() on a un-managed queue does nothing.
+   * Test item release sad: releaseJob() on a un-managed queue does nothing.
    */
   public function testReleaseSad() {
     list($server, $tube, $start_count) = $this->initServerWithTube();
     $item = 'foo';
-    $server->createItem($tube, $item);
+    $server->putData($tube, $item);
     $actual = $server->getTubeItemCount($tube);
     $expected = $start_count + 1;
     $this->assertEquals($expected, $actual);
 
     // Just-submitted job should not be available from an un-managed queue.
     $server->releaseTube($tube);
-    $job = $server->claimItem($tube);
-    $this->assertSame(FALSE, $job, 'ClaimItem returns nothing from an un-managed queue');
+    $job = $server->claimJob($tube);
+    $this->assertSame(FALSE, $job, 'claimJob returns nothing from an un-managed queue');
 
     // But it should still be there.
     $server->addTube($tube);
-    $job = $server->claimItem($tube);
-    $this->assertTrue(is_object($job) && $job instanceof Job, 'ClaimItem returns a Job');
+    $job = $server->claimJob($tube);
+    $this->assertTrue(is_object($job) && $job instanceof Job, 'claimJob returns a Job');
 
     // And it should not be included in the visible count.
     $actual = $server->getTubeItemCount($tube);
@@ -165,7 +165,7 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     // Releasing it does not makes it available if the queue is not managed.
     $server->releaseTube($tube);
-    $server->releaseItem($tube, $job);
+    $server->releaseJob($tube, $job);
     // Queue is re-handled to get the actual available count.
     $server->addTube($tube);
     $actual = $server->getTubeItemCount($tube);

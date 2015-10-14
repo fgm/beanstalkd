@@ -25,7 +25,7 @@ class BeanstalkdServer {
   ];
 
   /**
-   * The default timeout for claimItem().
+   * The default timeout for claimJob().
    *
    * @TODO make this configurable.
    */
@@ -79,7 +79,7 @@ class BeanstalkdServer {
    * @return false|\Pheanstalk\Job
    *   A job submitted to the queue, or FALSE if an error occurred.
    */
-  public function claimItem($name) {
+  public function claimJob($name) {
     // Do not do anything on tube not controlled by this instance.
     if (!isset($this->tubeNames[$name])) {
       return FALSE;
@@ -103,9 +103,9 @@ class BeanstalkdServer {
    *   The job workload.
    *
    * @return int
-   *   The id of the created job item. 0 indicates an error.
+   *   The id of the created job. 0 indicates an error.
    */
-  public function createItem($name, $data) {
+  public function putData($name, $data) {
     // Do not do anything on tube not controlled by this instance.
     if (!isset($this->tubeNames[$name])) {
       return 0;
@@ -124,7 +124,7 @@ class BeanstalkdServer {
    * @param int $id
    *   The job id.
    */
-  public function deleteItem($name, $id) {
+  public function deleteJob($name, $id) {
     // Do not do anything on tube not controlled by this instance.
     if (!isset($this->tubeNames[$name])) {
       return;
@@ -136,14 +136,14 @@ class BeanstalkdServer {
   }
 
   /**
-   * Release a job obtained from claimItem().
+   * Release a job obtained from claimJob().
    *
    * @param string $name
    *   The tube name.
    * @param \Pheanstalk\Job $job
-   *   A job obtained from claimItem().
+   *   A job obtained from claimJob().
    */
-  public function releaseItem($name, Job $job) {
+  public function releaseJob($name, Job $job) {
     // Do not do anything on invalid job, or tube not controlled.
     if ($job->getId() <= 0 || !isset($this->tubeNames[$name])) {
       return;
@@ -315,7 +315,7 @@ class BeanstalkdServer {
    * Return the Beanstalkd metadata for a job.
    *
    * @param \Pheanstalk\Job $job
-   *   A job returned by BeanstalkdServer::claimItem().
+   *   A job returned by BeanstalkdServer::claimJob().
    *
    * @return false|\Pheanstalk\Response\ArrayResponse
    *   The statistics about the job, or false if it could not be found.
