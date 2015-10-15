@@ -312,51 +312,55 @@ class BeanstalkdServer {
   }
 
   /**
-   * Return the Beanstalkd metadata for a job.
+   * Return Beanstalkd statistics from the server.
    *
+   * @param string $type
+   *   One of "global", "tube", and "job".
    * @param string $name
-   *   The name of the queue in which the job is to be found.
-   * @param \Pheanstalk\Job $job
-   *   A job returned by BeanstalkdServer::claimJob().
-   *
-   * @return false|\Pheanstalk\Response\ArrayResponse
-   *   The statistics about the job, or false if it could not be found.
-   */
-  public function statsJob($name, Job $job) {
-    // Do not do anything on tube not controlled by this instance.
-    if (!isset($this->tubeNames[$name])) {
-      return FALSE;
-    }
-
-    try {
-      /* @var \Pheanstalk\Response\ArrayResponse $stats */
-      $stats = $this->driver->statsJob($job);
-    }
-    catch (ServerException $e) {
-      $stats = FALSE;
-    }
-
-    return $stats;
-  }
-
-  /**
-   * Return the Beanstalkd metadata for a tube.
-   *
-   * @param string $name
-   *   The name of the tube.
+   *   The name of the tube. Not used for "global".
+   * @param null|\Pheanstalk\Job $job
+   *   The queried job, Only used for "job".
    *
    * @return false|\Pheanstalk\Response\ArrayResponse
    *   The statistics about the tube, or false if it could not be found.
    */
-  public function statsTube($name) {
-    // Do not do anything on tube not controlled by this instance.
-    if (!isset($this->tubeNames[$name])) {
-      return FALSE;
+  public function stats($type, $name = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME, Job $job = NULL) {
+    if ($type === 'global') {
+      $command = function (PheanstalkInterface $driver) {
+        return $driver->stats();
+      };
+    }
+    else {
+      // Do not do anything on tube not controlled by this instance.
+      if (!isset($this->tubeNames[$name])) {
+        return FALSE;
+      }
+
+      if ($type === 'tube') {
+        $command = function (PheanstalkInterface $driver) use ($name) {
+          return $driver->statsTube($name);
+        };
+      }
+      elseif ($type === 'job') {
+        if ($job === NULL) {
+          return FALSE;
+        }
+        else {
+          $command = function (PheanstalkInterface $driver) use ($job) {
+            return $driver->statsJob($job);
+          };
+        }
+      }
+      else {
+        throw new \InvalidArgumentException(t('Invalid statistics type: @type', [
+          '@type' => $type,
+        ]));
+      };
     }
 
     try {
       /* @var \Pheanstalk\Response\ArrayResponse $stats */
-      $stats = $this->driver->statsTube($name);
+      $stats = $command($this->driver);
     }
     catch (ServerException $e) {
       $stats = FALSE;
@@ -364,4 +368,5 @@ class BeanstalkdServer {
 
     return $stats;
   }
+
 }

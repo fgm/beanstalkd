@@ -81,7 +81,7 @@ class BeanstalkdQueue implements QueueInterface {
       return FALSE;
     }
 
-    $stats = $this->server->statsJob($this->name, $job);
+    $stats = $this->server->stats('job', $this->name, $job);
 
     // Return the Epoch if age is unknown, to ensure "created" will be 0..
     $age = $stats['age'] ?: REQUEST_TIME;

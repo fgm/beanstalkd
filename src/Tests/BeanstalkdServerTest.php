@@ -149,8 +149,8 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
   public function testReleaseSad() {
     /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube, $start_count) = $this->initServerWithTube();
-    $item = 'foo';
-    $server->putData($tube, $item);
+    $data = 'foo';
+    $server->putData($tube, $data);
     $actual = $server->getTubeItemCount($tube);
     $expected = $start_count + 1;
     $this->assertEquals($expected, $actual);
@@ -180,6 +180,32 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
     $actual = $server->getTubeItemCount($tube);
     $expected = $start_count;
     $this->assertEquals($expected, $actual);
+
+    $this->cleanUp($server, $tube);
+  }
+
+  /**
+   * Test the various stats() subcommands.
+   */
+  public function testStats() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+    list($server, $tube,) = $this->initServerWithTube();
+
+    $data = 'foo';
+    $job_id = $server->putData($tube, $data);
+
+    $stats = $server->stats('global');
+    $this->assertTrue($stats instanceof \ArrayObject, "Global stats implements ArrayObject");
+    $this->assertTrue(count($stats) > 1, "Global stats contain more than one item.");
+
+    $stats = $server->stats('tube', $tube);
+    $this->assertTrue($stats instanceof \ArrayObject, "Tube stats implements ArrayObject");
+    $this->assertTrue(count($stats) > 1, "Tube stats contain more than one item.");
+
+    $job = new Job($job_id, NULL);
+    $stats = $server->stats('job', $tube, $job);
+    $this->assertTrue($stats instanceof \ArrayObject, "Job stats implements ArrayObject");
+    $this->assertTrue(count($stats) > 1, "Job stats contain more than one item.");
 
     $this->cleanUp($server, $tube);
   }
