@@ -193,19 +193,36 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     $data = 'foo';
     $job_id = $server->putData($tube, $data);
+    $job = new Job($job_id, NULL);
 
     $stats = $server->stats('global');
-    $this->assertTrue($stats instanceof \ArrayObject, "Global stats implements ArrayObject");
-    $this->assertTrue(count($stats) > 1, "Global stats contain more than one item.");
+    $this->assertTrue($stats instanceof \ArrayObject, 'Global stats implements ArrayObject');
+    $this->assertGreaterThan(1, count($stats), 'Global stats contain more than one item.');
 
     $stats = $server->stats('tube', $tube);
-    $this->assertTrue($stats instanceof \ArrayObject, "Tube stats implements ArrayObject");
-    $this->assertTrue(count($stats) > 1, "Tube stats contain more than one item.");
+    $this->assertTrue($stats instanceof \ArrayObject, 'Tube stats implements ArrayObject');
+    $this->assertGreaterThan(1, count($stats), 'Tube stats contain more than one item.');
 
-    $job = new Job($job_id, NULL);
     $stats = $server->stats('job', $tube, $job);
-    $this->assertTrue($stats instanceof \ArrayObject, "Job stats implements ArrayObject");
-    $this->assertTrue(count($stats) > 1, "Job stats contain more than one item.");
+    $this->assertTrue($stats instanceof \ArrayObject, 'Job stats implements ArrayObject');
+    $this->assertGreaterThan(1, count($stats), 'Job stats contain more than one item.');
+
+    try {
+      $server->stats('invalid');
+      $this->fail('Asking for incorrect statistics does not throw an exception');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertTrue(TRUE, 'Asking for incorrect statistics throws the expected exception');
+    }
+    catch (\Exception $e) {
+      $this->fail('Asking for incorrect statistics throws incorrect exception');
+    }
+
+    $stats = $server->stats('job', $tube);
+    $this->assertFalse($stats, 'Asking for job stats for null job returns FALSE');
+
+    $stats = $server->stats('job', $tube . $tube, $job);
+    $this->assertFalse($stats, 'Asking for job stats for correct job on incorrect tube returns FALSE');
 
     $this->cleanUp($server, $tube);
   }

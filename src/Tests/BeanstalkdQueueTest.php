@@ -51,15 +51,15 @@ class BeanstalkdQueueTest extends BeanstalkdTestBase {
 
     $expected = $this->queue->getName();
     $actual = $name;
-    $this->assertEquals($expected, $actual, "Queue name matches default");
+    $this->assertEquals($expected, $actual, 'Queue name matches default');
 
-    $data = "foo";
+    $data = 'foo';
     $this->queue->createItem($data);
 
     $this->queue->deleteQueue();
     $actual = $this->queue->numberOfItems();
     $expected = 0;
-    $this->assertEquals($expected, $actual, "Queue no longer contains anything after deletion");
+    $this->assertEquals($expected, $actual, 'Queue no longer contains anything after deletion');
 
     $this->cleanUp($server, $name);
   }
@@ -70,34 +70,34 @@ class BeanstalkdQueueTest extends BeanstalkdTestBase {
   public function testItemCycle() {
     list($server, $name, $count) = $this->initServerWithTube();
 
-    $data = "foo";
+    $data = 'foo';
     $this->queue->createItem($data);
 
     $actual = $this->queue->numberOfItems();
     $expected = $count + 1;
-    $this->assertEquals($expected, $actual, "Creating an item increases the item count.");
+    $this->assertEquals($expected, $actual, 'Creating an item increases the item count.');
 
     $item = $this->queue->claimItem();
-    $this->assertTrue(is_object($item), "Claiming returns an item");
-    $this->assertTrue($item instanceof BeanstalkdQueueItem, "Claiming returns a correctly typed item");
+    $this->assertTrue(is_object($item), 'Claiming returns an item');
+    $this->assertTrue($item instanceof BeanstalkdQueueItem, 'Claiming returns a correctly typed item');
 
     $expected = $data;
     $actual = $item->data;
-    $this->assertEquals($expected, $actual, "Item content matches submission.");
+    $this->assertEquals($expected, $actual, 'Item content matches submission.');
 
     $actual = $this->queue->numberOfItems();
     $expected = $count;
-    $this->assertEquals($expected, $actual, "Claiming an item reduces the item count.");
+    $this->assertEquals($expected, $actual, 'Claiming an item reduces the item count.');
 
     $this->queue->releaseItem($item);
     $actual = $this->queue->numberOfItems();
     $expected = $count + 1;
-    $this->assertEquals($expected, $actual, "Releasing an item increases the item count.");
+    $this->assertEquals($expected, $actual, 'Releasing an item increases the item count.');
 
     $this->queue->deleteItem($item);
     $actual = $this->queue->numberOfItems();
     $expected = $count;
-    $this->assertEquals($expected, $actual, "Deleting an item reduces the item count.");
+    $this->assertEquals($expected, $actual, 'Deleting an item reduces the item count.');
 
     $this->cleanUp($server, $name);
   }
