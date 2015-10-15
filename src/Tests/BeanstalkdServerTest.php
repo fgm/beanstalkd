@@ -185,9 +185,9 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
   }
 
   /**
-   * Test the various stats() subcommands.
+   * Test the various stats() sub-commands in normal situations.
    */
-  public function testStats() {
+  public function testStatsHappy() {
     /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube,) = $this->initServerWithTube();
 
@@ -210,6 +210,9 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
     $this->cleanUp($server, $tube);
   }
 
+  /**
+   * Test the various stats() sub-commands in abnormal situations.
+   */
   public function testStatsSad() {
     /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
     list($server, $tube,) = $this->initServerWithTube();
@@ -237,4 +240,5 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     $this->cleanUp($server, $tube);
   }
+
 }

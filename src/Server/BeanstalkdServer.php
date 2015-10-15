@@ -312,6 +312,47 @@ class BeanstalkdServer {
   }
 
   /**
+   * Unprotected stats.
+   *
+   * @return object
+   *   A Pheanstalk statistics response.
+   */
+  protected function statsGlobal() {
+    $stats = $this->driver->stats();
+    return $stats;
+  }
+
+  /**
+   * Unprotected stats-tube.
+   *
+   * @param string $name
+   *   The name of the tube.
+   *
+   * @return object
+   *   A Pheanstalk statistics response.
+   */
+  protected function statsTube($name) {
+    $stats = $this->driver->statsTube($name);
+    return $stats;
+  }
+
+  /**
+   * Unprotected stats-job.
+   *
+   * @param string $name
+   *   The name of the tube. Not used, but needed for signature consistency.
+   * @param \Pheanstalk\Job $job
+   *   The queried job.
+   *
+   * @return object
+   *   A Pheanstalk statistics response.
+   */
+  protected function statsJob($name, Job $job) {
+    $stats = $this->driver->statsJob($job);
+    return $stats;
+  }
+
+  /**
    * Return Beanstalkd statistics from the server.
    *
    * @param string $type
@@ -325,42 +366,30 @@ class BeanstalkdServer {
    *   The statistics about the tube, or false if it could not be found.
    */
   public function stats($type, $name = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME, Job $job = NULL) {
-    if ($type === 'global') {
-      $command = function (PheanstalkInterface $driver) {
-        return $driver->stats();
-      };
+    $types = ['global', 'tube', 'job'];
+    if (!in_array($type, $types)) {
+      throw new \InvalidArgumentException(t('Invalid statistics type: @type', [
+        '@type' => $type,
+      ]));
     }
-    else {
+
+    if ($type !== 'global') {
       // Do not do anything on tube not controlled by this instance.
       if (!isset($this->tubeNames[$name])) {
         return FALSE;
       }
 
-      if ($type === 'tube') {
-        $command = function (PheanstalkInterface $driver) use ($name) {
-          return $driver->statsTube($name);
-        };
-      }
-      elseif ($type === 'job') {
+      if ($type === 'job') {
         if ($job === NULL) {
           return FALSE;
         }
-        else {
-          $command = function (PheanstalkInterface $driver) use ($job) {
-            return $driver->statsJob($job);
-          };
-        }
       }
-      else {
-        throw new \InvalidArgumentException(t('Invalid statistics type: @type', [
-          '@type' => $type,
-        ]));
-      };
     }
 
     try {
-      /* @var \Pheanstalk\Response\ArrayResponse $stats */
-      $stats = $command($this->driver);
+      $method = 'stats' . $type;
+      /* @var \ArrayObject $stats */
+      $stats = $this->{$method}($name, $job);
     }
     catch (ServerException $e) {
       $stats = FALSE;
