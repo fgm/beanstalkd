@@ -8,7 +8,7 @@ namespace Drupal\beanstalkd\Queue;
 
 use Drupal\Core\Queue\QueueInterface;
 use Drupal\beanstalkd\Server\BeanstalkdServer;
-use Drupal\beanstalkd\Server\Item;
+use Pheanstalk\Job;
 
 /**
  * Class BeanstalkdQueue is a QueueInterface implementation for Beanstalkd.
@@ -41,6 +41,8 @@ class BeanstalkdQueue implements QueueInterface {
   public function __construct($name, BeanstalkdServer $server) {
     $this->name = $name;
     $this->server = $server;
+
+    $this->createQueue();
   }
 
   /**
@@ -48,6 +50,16 @@ class BeanstalkdQueue implements QueueInterface {
    */
   public function createItem($data) {
     $this->server->putData($this->name, $data);
+  }
+
+  /**
+   * Name getter.
+   *
+   * @return string
+   *   The queue name.
+   */
+  public function getName() {
+    return $this->name;
   }
 
   /**
@@ -75,7 +87,7 @@ class BeanstalkdQueue implements QueueInterface {
     $age = $stats['age'] ?: REQUEST_TIME;
 
     $created = REQUEST_TIME - $age;
-    $item = new Item($job->getId(), $job->getData(), $created);
+    $item = new BeanstalkdQueueItem($job->getId(), $job->getData(), $created);
     return $item;
   }
 
@@ -83,22 +95,23 @@ class BeanstalkdQueue implements QueueInterface {
    * {@inheritdoc}
    */
   public function deleteItem($item) {
-    if (!isset($item->id)) {
+    if (!isset($item->item_id)) {
       throw new \InvalidArgumentException('Item to delete does not appear to come from claimItem().');
     }
 
-    $this->server->deleteJob($this->name, $item->id);
+    $this->server->deleteJob($this->name, $item->item_id);
   }
 
   /**
    * {@inheritdoc}
    */
   public function releaseItem($item) {
-    if (!isset($item->id)) {
+    if (!isset($item->item_id)) {
       throw new \InvalidArgumentException('Item to release does not appear to come from claimItem().');
     }
 
-    $this->server->releaseJob($this->name, $item->id);
+    $job = new Job($item->item_id, $item->data);
+    $this->server->releaseJob($this->name, $job);
   }
 
   /**

@@ -339,4 +339,29 @@ class BeanstalkdServer {
     return $stats;
   }
 
+  /**
+   * Return the Beanstalkd metadata for a tube.
+   *
+   * @param string $name
+   *   The name of the tube.
+   *
+   * @return false|\Pheanstalk\Response\ArrayResponse
+   *   The statistics about the tube, or false if it could not be found.
+   */
+  public function statsTube($name) {
+    // Do not do anything on tube not controlled by this instance.
+    if (!isset($this->tubeNames[$name])) {
+      return FALSE;
+    }
+
+    try {
+      /* @var \Pheanstalk\Response\ArrayResponse $stats */
+      $stats = $this->driver->statsTube($name);
+    }
+    catch (ServerException $e) {
+      $stats = FALSE;
+    }
+
+    return $stats;
+  }
 }

@@ -5,7 +5,7 @@
  * Contains Item.
  */
 
-namespace Drupal\beanstalkd\Server;
+namespace Drupal\beanstalkd\Queue;
 
 /**
  * Class Item is a strongly typed implementation of the Queue API stdClass item.
@@ -15,7 +15,7 @@ namespace Drupal\beanstalkd\Server;
  *
  * @see \Drupal\beanstalkd\Server\Payload
  */
-class Item {
+class BeanstalkdQueueItem {
   /**
    * The same as what what passed into createItem().
    *
