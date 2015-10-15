@@ -207,6 +207,17 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
     $this->assertTrue($stats instanceof \ArrayObject, 'Job stats implements ArrayObject');
     $this->assertGreaterThan(1, count($stats), 'Job stats contain more than one item.');
 
+    $this->cleanUp($server, $tube);
+  }
+
+  public function testStatsSad() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+    list($server, $tube,) = $this->initServerWithTube();
+
+    $data = 'foo';
+    $job_id = $server->putData($tube, $data);
+    $job = new Job($job_id, NULL);
+
     try {
       $server->stats('invalid');
       $this->fail('Asking for incorrect statistics does not throw an exception');
@@ -226,5 +237,4 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     $this->cleanUp($server, $tube);
   }
-
 }
