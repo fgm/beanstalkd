@@ -96,6 +96,7 @@ class BeanstalkdServerFactory {
 
   /**
    * Return the server definitions, as fixed during initialization.
+   *
    * @return array
    *   The server definitions, keyed by alias.
    */

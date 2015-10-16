@@ -94,6 +94,22 @@ class BeanstalkdServer {
   }
 
   /**
+   * List tube names on the server.
+   *
+   * @return array
+   *   An array of tube names.
+   */
+  public function listTubes() {
+    try {
+      $tubes = $this->driver->listTubes();
+    }
+    catch (ConnectionException $e) {
+      $tubes = [];
+    }
+    return $tubes;
+  }
+
+  /**
    * Add data for a job to a tube.
    *
    * To match the Drupal Queue API, this method does not support delayed jobs.
