@@ -60,36 +60,36 @@ function beanstalkd_drush_command() {
       'all' => 'Also list workers not configured for Beanstalkd handling.',
     ],
   ];
-  $items['beanstalkd-servers'] = array(
+  $items['beanstalkd-servers'] = [
     'aliases' => ['btsv'],
     'description' => 'List of all the beanstalkd servers',
-  );
+  ];
 
-  $items['beanstalkd-server-queues'] = array(
+  $items['beanstalkd-server-queues'] = [
     'description' => 'List Beanstalkd queues on one or all servers',
-    'arguments' => array(
+    'arguments' => [
       'server' => 'Specify the server to query',
-    ),
+    ],
     'aliases' => ['btsq'],
-  );
+  ];
 
-  $items['beanstalkd-server-stats'] = array(
+  $items['beanstalkd-server-stats'] = [
     'description' => 'Return the Beanstalkd stats for one or all servers',
-    'arguments' => array(
+    'arguments' => [
       'server' => 'Specify the server to query',
-    ),
+    ],
     'aliases' => ['btss'],
-  );
+  ];
+
+  $items['beanstalkd-queue-stats'] = [
+    'description' => 'Display the stats for the specified queue',
+    'arguments' => [
+      'queue' => 'The name of the queue',
+    ],
+    'aliases' => array('btqs'),
+  ];
 
   // ---- Old commands below ---------------------------------------------------
-  $items['beanstalkd-queue-stats'] = array(
-    'callback' => 'drush_beanstalkd_queue_stats',
-    'description' => 'Display the stats for the specified queue',
-    'arguments' => array(
-      'queue' => 'specify the name of the queue',
-    ),
-    'aliases' => array('queue-stats'),
-  );
   $items['beanstalkd-item-stats'] = array(
     'callback' => 'drush_beanstalkd_item_stats',
     'description' => 'Displays stats for a specified job in the queue',
@@ -172,6 +172,44 @@ function drush_beanstalkd_drupal_queues() {
 }
 
 /**
+ * Drush callback for beanstalkd-tube-stats.
+ *
+ * @param null|string $name
+ *   The name of the Beanstalkd queue for which to get Beanstalkd information.
+ */
+function drush_beanstalkd_queue_stats($name = NULL) {
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
+  $factory = \Drupal::service('beanstalkd.server.factory');
+  $mappings = array_flip(array_keys($factory->getQueueMappings()));
+
+  /* @var \Drupal\beanstalkd\WorkerManager $manager */
+  $manager = \Drupal::service('beanstalkd.worker_manager');
+  $drupal_queues = array_flip($manager->getBeanstalkdQueues());
+
+  if (!empty($name)) {
+    $server = $factory->getQueueServer($name);
+    $queue_servers = [$name => $server];
+  }
+  else {
+    $names = array_keys($mappings + $drupal_queues);
+    $queue_servers = [];
+
+    foreach ($names as $name) {
+      $queue_servers[$name] = $factory->getQueueServer($name);
+    }
+  }
+
+  $result = [];
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+  foreach ($queue_servers as $name => $server) {
+    $stats = $server->stats('tube', $name);
+    $stats = empty($stats) ? [] : $stats->getArrayCopy();
+    $result[$name] = $stats;
+  }
+  drush_print(Yaml::dump($result));
+}
+
+/**
  * Drush callback for 'beanstalkd-servers'.
  */
 function drush_beanstalkd_servers() {
@@ -201,11 +239,8 @@ function drush_beanstalkd_server_queues($alias = NULL) {
 /**
  * Drush callback for beanstalkd-server-stats.
  *
- * @param string $alias
+ * @param null|string $alias
  *   The Beanstalkd host alias.
- *
- * @throws \Exception
- *   When connection cannot be established. Maybe other cases too ?
  */
 function drush_beanstalkd_server_stats($alias = NULL) {
   $servers = _beanstalkd_get_servers($alias, TRUE);
@@ -222,41 +257,6 @@ function drush_beanstalkd_server_stats($alias = NULL) {
 }
 
 // ==== Old callbacks below ====================================================
-/**
- * Drush callback for beanstalkd-queue-stats.
- *
- * @param string $name
- *   The name of the Beanstalkd queue for which to get Beanstalks information.
- *
- * @throws \Exception
- *   When connection cannot be established. Maybe other cases too ?
- */
-function drush_beanstalkd_queue_stats($name = NULL) {
-  beanstalkd_load_pheanstalk();
-
-  $queues = beanstalkd_get_queues();
-  $names = array_combine($queues, $queues);
-
-  if (!$name) {
-    $name = drush_choice($names, 'Select a queue to query');
-  }
-
-  if ($name && isset($names[$name])) {
-    $queue = new QueueBeanstalkd($name);
-    $stats = $queue->statsTube($name);
-
-    $rows = array();
-    foreach ($stats as $key => $stat) {
-      $rows[] = array(
-        Unicode::ucfirst(str_replace('-', ' ', $key)),
-        $stat,
-      );
-    }
-
-    drush_print_table($rows);
-  }
-}
-
 /**
  * Drush callback for beanstalkd-item-stats.
  *

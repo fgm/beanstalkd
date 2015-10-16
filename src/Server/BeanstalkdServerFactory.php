@@ -172,6 +172,16 @@ class BeanstalkdServerFactory {
   }
 
   /**
+   * Return queue mapping.
+   *
+   * @return array
+   *   A hash of server aliases by queue names.
+   */
+  public function getQueueMappings() {
+    return $this->mappings;
+  }
+
+  /**
    * Return the BeanstalkServer instance for a queue name.
    *
    * This is the method most likely to be useful, because it is mapping-aware.
@@ -185,6 +195,7 @@ class BeanstalkdServerFactory {
   public function getQueueServer($name) {
     $alias = $this->getQueueMapping($name);
     $server = $this->get($alias);
+    $server->addTube($name);
     return $server;
   }
 

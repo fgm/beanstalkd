@@ -393,6 +393,7 @@ class BeanstalkdServer {
     if ($type !== 'global') {
       // Do not do anything on tube not controlled by this instance.
       if (!isset($this->tubeNames[$name])) {
+        echo "Not handling $name\n";
         return FALSE;
       }
 
