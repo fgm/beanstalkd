@@ -7,6 +7,7 @@
 
 use Drupal\Component\Utility\Unicode;
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Implements hook_drush_command().
@@ -21,12 +22,13 @@ function beanstalkd_drush_command() {
       'all' => 'Also list workers not configured for Beanstalkd handling.',
     ],
   ];
-
-  // ---- Old commands below ---------------------------------------------------
   $items['beanstalkd-servers'] = array(
     'callback' => 'drush_beanstalkd_servers',
+    'aliases' => ['btsv'],
     'description' => 'List of all the beanstalkd servers',
   );
+
+  // ---- Old commands below ---------------------------------------------------
   $items['beanstalkd-server-stats'] = array(
     'callback' => 'drush_beanstalkd_server_stats',
     'description' => 'Return the beanstalkd server stats',
@@ -113,6 +115,16 @@ function beanstalkd_drush_command() {
 }
 
 /**
+ * Drush callback for beanstalkd-servers.
+ */
+function drush_beanstalkd_servers() {
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
+  $factory = \Drupal::service('beanstalkd.server.factory');
+  $servers = $factory->getServerDefinitions();
+  drush_print(Yaml::dump($servers));
+}
+
+/**
  * Drush callback for beanstalkd-drupal_queues.
  */
 function drush_beanstalkd_drupal_queues() {
@@ -129,17 +141,6 @@ function drush_beanstalkd_drupal_queues() {
 }
 
 // ==== Old callbacks below ====================================================
-/**
- * Drush callback for beanstalkd-servers.
- */
-function drush_beanstalkd_servers() {
-  // beanstalkd_load_pheanstalk();
-  $queues = beanstalkd_get_host_queues();
-
-  drush_print('Available beanstalkd servers:');
-  drush_print("\n" . implode("\n", array_keys($queues)));
-}
-
 /**
  * Drush callback for beanstalkd-server-stats.
  *

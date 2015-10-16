@@ -26,7 +26,7 @@ class BeanstalkdServerFactory {
   ];
 
   const DEFAULT_SERVERS = [
-    'servers' => [self::DEFAULT_SERVER_ALIAS => self::DEFAULT_SERVER_PARAMETERS],
+    self::DEFAULT_SERVER_ALIAS => self::DEFAULT_SERVER_PARAMETERS,
   ];
 
   // As luck has it.
@@ -92,6 +92,15 @@ class BeanstalkdServerFactory {
 
     $result = $this->servers[$alias];
     return $result;
+  }
+
+  /**
+   * Return the server definitions, as fixed during initialization.
+   * @return array
+   *   The server definitions, keyed by alias.
+   */
+  public function getServerDefinitions() {
+    return $this->servers;
   }
 
   /**
