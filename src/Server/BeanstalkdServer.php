@@ -87,7 +87,7 @@ class BeanstalkdServer {
     }
 
     /** @var \Pheanstalk\Job $job */
-    $job = $this->driver->reserve(static::DEFAULT_CLAIM_TIMEOUT);
+    $job = $this->driver->reserveFromTube($name, static::DEFAULT_CLAIM_TIMEOUT);
     // @TODO Implement specific handling for jobs containing a Payload object,
     // like the ability to interact with TTR.
     return $job;
@@ -393,7 +393,6 @@ class BeanstalkdServer {
     if ($type !== 'global') {
       // Do not do anything on tube not controlled by this instance.
       if (!isset($this->tubeNames[$name])) {
-        echo "Not handling $name\n";
         return FALSE;
       }
 
