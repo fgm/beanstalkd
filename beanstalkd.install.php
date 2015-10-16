@@ -32,8 +32,8 @@ function beanstalkd_requirements($phase) {
     return $requirements;
   }
 
-  /* @var \Drupal\beanstalkd\PheanstalkFactory $factory */
-  $factory = \Drupal::service('beanstalkd.pheanstalk.factory');
+  /* @var \Drupal\beanstalkd\Server\ServerFactory $factory */
+  $factory = \Drupal::service('beanstalkd.server.factory');
   $driver = $factory->create();
   $requirements['pheanstalk'] += [
     'value' => Pheanstalk::VERSION,

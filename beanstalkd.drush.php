@@ -5,8 +5,8 @@
  * Drush plugin for Beanstalkd.
  */
 
+use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Drupal\Component\Utility\Unicode;
-use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -284,7 +284,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
 
   if (isset($queues[$hostname])) {
     if ($item_id) {
-      $queue = new QueueBeanstalkd(NULL);
+      $queue = new BeanstalkdQueue('default');
       $queue->createConnection($host, $port);
 
       try {

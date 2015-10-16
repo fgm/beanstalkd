@@ -2,23 +2,16 @@
 <?php
 /**
  * @file
- *   CLI tool for working with queues.
+ * CLI tool for working with queues.
  */
-use Drupal\beanstalkd\Cli\Bootstrap;
-use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 
 use Drupal\Core\Site\Settings;
-use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 /**
- * Drupal shell execution script
+ * Drupal shell execution script.
  */
-require_once __DIR__ . '/src/Cli/Bootstrap.php';
 
-$boot = new Bootstrap(getcwd());
-$boot->parseEnvironment();
-$kernel = $boot->bootstrapDrupal();
-$kernel->handle($boot->request, HttpKernelInterface::MASTER_REQUEST, FALSE);
+/* @FIXME fix the boot sequence, or just drop this file and use Drush. */
 
 $start_memory = memory_get_usage();
 
@@ -60,8 +53,8 @@ if (isset($args['q']) || isset($args['queue'])) {
 }
 
 // Make sure all the tubes are created
-// Note: With Beanstalkd this doesn't do anything, as queues are created dynamically.
-/** @var \Drupal\Core\Queue\QueueFactory $factory */
+// With Beanstalkd this doesn't do anything, as queues are created dynamically.
+/* @var \Drupal\Core\Queue\QueueFactory $factory */
 $factory = \Drupal::service('queue');
 foreach ($names as $name) {
   $factory->get($name)->createQueue();
