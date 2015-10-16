@@ -5,8 +5,8 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Drupal\Component\Utility\Unicode;
+use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Symfony\Component\Yaml\Yaml;
 
 /**
