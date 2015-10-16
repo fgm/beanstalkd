@@ -8,6 +8,7 @@
 use Drupal\Component\Utility\Unicode;
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
 use Symfony\Component\Yaml\Yaml;
+use Zend\Stdlib\ArrayObject;
 
 /**
  * Implements hook_drush_command().
@@ -28,15 +29,16 @@ function beanstalkd_drush_command() {
     'description' => 'List of all the beanstalkd servers',
   );
 
-  // ---- Old commands below ---------------------------------------------------
   $items['beanstalkd-server-stats'] = array(
     'callback' => 'drush_beanstalkd_server_stats',
     'description' => 'Return the beanstalkd server stats',
     'arguments' => array(
       'server' => 'Specify the server to query',
     ),
-    'aliases' => array('server-stats'),
+    'aliases' => array('btss'),
   );
+
+  // ---- Old commands below ---------------------------------------------------
   $items['beanstalkd-queue-list'] = array(
     'callback' => 'drush_beanstalkd_queue_list',
     'description' => 'Print a list of all Beanstalkd queues',
@@ -115,17 +117,7 @@ function beanstalkd_drush_command() {
 }
 
 /**
- * Drush callback for beanstalkd-servers.
- */
-function drush_beanstalkd_servers() {
-  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
-  $factory = \Drupal::service('beanstalkd.server.factory');
-  $servers = $factory->getServerDefinitions();
-  drush_print(Yaml::dump($servers));
-}
-
-/**
- * Drush callback for beanstalkd-drupal_queues.
+ * Drush callback for 'beanstalkd-drupal-queues'.
  */
 function drush_beanstalkd_drupal_queues() {
   /* @var \Drupal\beanstalkd\WorkerManager $manager */
@@ -140,63 +132,56 @@ function drush_beanstalkd_drupal_queues() {
   drush_print_r($queues);
 }
 
-// ==== Old callbacks below ====================================================
+/**
+ * Drush callback for 'beanstalkd-servers'.
+ */
+function drush_beanstalkd_servers() {
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
+  $factory = \Drupal::service('beanstalkd.server.factory');
+  $servers = $factory->getServerDefinitions();
+  drush_print(Yaml::dump($servers));
+}
+
 /**
  * Drush callback for beanstalkd-server-stats.
  *
  * @param string $host
- *   The Beanstalkd host.
+ *   The Beanstalkd host alias.
  *
  * @throws \Exception
  *   When connection cannot be established. Maybe other cases too ?
  */
 function drush_beanstalkd_server_stats($host = NULL) {
-  beanstalkd_load_pheanstalk();
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
+  $factory = \Drupal::service('beanstalkd.server.factory');
+  $all_servers = $factory->getServerDefinitions();
 
-  $queues = beanstalkd_get_host_queues();
-
-  if ($host) {
-    $host_info = parse_url($host) + array('port' => \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
-    if (!isset($host_info['host']) && isset($host_info['path'])) {
-      $host_info['host'] = $host_info['path'];
-      unset($host_info['path']);
+  if (isset($host)) {
+    if (isset($all_servers[$host])) {
+      $servers = [$host];
     }
-    $host = $host_info['host'] . ':' . $host_info['port'];
-  }
-
-  $queue_ids = array_keys($queues);
-  if (count($queues) > 1) {
-    $options = array_combine($queue_ids, $queue_ids);
-    $host = drush_choice($options, 'Select a host to query');
-  }
-  elseif (!$host) {
-    $host = reset($queue_ids);
-  }
-  unset($queue_ids);
-
-  if ($host && isset($queues[$host])) {
-    $host_info = parse_url($host);
-
-    $queue = new QueueBeanstalkd(NULL);
-    $queue->createConnection($host_info['host'], $host_info['port']);
-
-    $stats = $queue->stats();
-
-    $rows = array();
-    foreach ($stats as $key => $stat) {
-      $rows[] = array(
-        Unicode::ucfirst(str_replace('-', ' ', $key)),
-        $stat,
-      );
+    else {
+      drush_set_error('beanstalkd', t('@host is not a known server.', ['@host' => $host]));
+      return;
     }
+  }
+  else {
+    $servers = array_keys($all_servers);
+  }
 
-    drush_print_table($rows);
+  $result = [];
+  foreach ($servers as $name) {
+    $server = $factory->get($name);
+    $stats = $server->stats('global');
+    $result[$name] = ($stats instanceof \ArrayObject)
+      ? $stats->getArrayCopy()
+      : [];
   }
-  elseif ($host) {
-    drush_log(dt('Invalid server !server', array('!server' => $host)), 'error');
-  }
+
+  drush_print_r(Yaml::dump($result));
 }
 
+// ==== Old callbacks below ====================================================
 /**
  * Drush callback for beanstalkd-queue-list.
  *

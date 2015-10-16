@@ -10,6 +10,7 @@
 namespace Drupal\beanstalkd\Server;
 
 use Pheanstalk\Command\PeekCommand;
+use Pheanstalk\Exception\ConnectionException;
 use Pheanstalk\Exception\ServerException;
 use Pheanstalk\Job;
 use Pheanstalk\PheanstalkInterface;
@@ -387,11 +388,14 @@ class BeanstalkdServer {
     }
 
     try {
-      $method = 'stats' . $type;
+      $method = 'stats' . ucfirst($type);
       /* @var \ArrayObject $stats */
       $stats = $this->{$method}($name, $job);
     }
     catch (ServerException $e) {
+      $stats = FALSE;
+    }
+    catch (ConnectionException $e) {
       $stats = FALSE;
     }
 
