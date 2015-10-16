@@ -15,29 +15,16 @@ use Drupal\Core\Site\Settings;
 
 $start_memory = memory_get_usage();
 
-beanstalkd_load_pheanstalk();
-
-if (isset($args['c']) || isset($args['host'])) {
-  $conf['beanstalkd_host'] = isset($args['c']) ? $args['c'] : $args['host'];
-}
-
-if (isset($args['p']) || isset($args['port'])) {
-  $conf['beanstalkd_port'] = isset($args['p']) ? $args['p'] : $args['port'];
-}
+/*
+-c | --host is now taken from settings for host aliases.
+-p | --port is now taken from settings for host aliases.
+-l|--list is now drush btdq for drupal queues, drush btsq for server queues.
+ */
 
 $hostname = Settings::get('beanstalkd_host', 'localhost')
   . ':' . Settings::get('beanstalkd_port', \Pheanstalk_Pheanstalk::DEFAULT_PORT);
 $names = beanstalkd_get_queues($hostname);
 
-if (isset($args['l']) || isset($args['list'])) {
-  if (!empty($names)) {
-    echo (t("Available beanstalkd queues:\n\n@queues\n", array('@queues' => implode("\n", $names))));
-  }
-  else {
-    echo (t("No queues available\n"));
-  }
-  exit();
-}
 
 if (isset($args['q']) || isset($args['queue'])) {
   $filter_queues = explode(',', (isset($args['q']) ? $args['q'] : $args['queue']));

@@ -72,6 +72,19 @@ class BeanstalkdServer {
   }
 
   /**
+   * Watch additional tubes.
+   *
+   * @param string[] $names
+   *   The name of additional tubes to watch.
+   */
+  public function addWatches(array $names) {
+    foreach ($names as $name) {
+      $this->addTube($name);
+      $this->driver->watch($name);
+    }
+  }
+
+  /**
    * Reserve the next ready item from a tube.
    *
    * @param string $name
@@ -90,6 +103,20 @@ class BeanstalkdServer {
     $job = $this->driver->reserveFromTube($name, static::DEFAULT_CLAIM_TIMEOUT);
     // @TODO Implement specific handling for jobs containing a Payload object,
     // like the ability to interact with TTR.
+    return $job;
+  }
+
+  /**
+   * Reserve the next ready item from a tube on the server watch list.
+   *
+   * This mechanism is not a standard Queue API feature, and needs an up-to-date
+   * watch list. Do not mix with claimJob(), which resets the watch list.
+   *
+   * @return false|\Pheanstalk\Job
+   *   A job submitted to the queue, or FALSE if an error occurred.
+   */
+  public function claimJobFromAnyTube() {
+    $job = $this->driver->reserve(static::DEFAULT_CLAIM_TIMEOUT);
     return $job;
   }
 
@@ -356,6 +383,10 @@ class BeanstalkdServer {
   /**
    * Unprotected stats-job.
    *
+   * This is not compatible with normal Queue API use. Use stats() instead.
+   * The drush plugin needs it to be public, in order to perform multi-queue
+   * runs, which have no direct support in Queue API.
+   *
    * @param string $name
    *   The name of the tube. Not used, but needed for signature consistency.
    * @param \Pheanstalk\Job $job
@@ -363,8 +394,10 @@ class BeanstalkdServer {
    *
    * @return object
    *   A Pheanstalk statistics response.
+   *
+   * @see drush_beanstalkd_run_server()
    */
-  protected function statsJob($name, Job $job) {
+  public function statsJob($name, Job $job) {
     $stats = $this->driver->statsJob($job);
     return $stats;
   }

@@ -11,3 +11,8 @@ services:
   beanstalkd.worker_manager:
     class: Drupal\beanstalkd\WorkerManager
     arguments: ['@plugin.manager.queue_worker', '@settings', '@queue']
+
+  # Name is defined by core.
+  logger.channel.beanstalkd:
+    parent: logger.channel_base
+    arguments: ['beanstalkd']

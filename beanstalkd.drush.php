@@ -5,9 +5,47 @@
  * Drush plugin for Beanstalkd.
  */
 
+use Doctrine\Common\Util\Debug;
+use Drupal\beanstalkd\Server\BeanstalkdServer;
+use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
+use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Component\Utility\Unicode;
 use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Symfony\Component\Yaml\Yaml;
+
+/**
+ * Return the combined list of queue workers and queues with a mapping.
+ *
+ * @param null|string $name
+ *   If passed, the only queue exposed in the results.
+ *
+ * @return array
+ *   A queue-name-indexed hash of BeanstalkdServer instances.
+ */
+function _beanstalkd_get_queues($name = NULL) {
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
+  $factory = \Drupal::service('beanstalkd.server.factory');
+  $mappings = array_flip(array_keys($factory->getQueueMappings()));
+
+  /* @var \Drupal\beanstalkd\WorkerManager $manager */
+  $manager = \Drupal::service('beanstalkd.worker_manager');
+  $drupal_queues = array_flip($manager->getBeanstalkdQueues());
+
+  if (!empty($name)) {
+    $server = $factory->getQueueServer($name);
+    $queue_servers = [$name => $server];
+  }
+  else {
+    $names = array_keys($mappings + $drupal_queues);
+    $queue_servers = [];
+
+    foreach ($names as $name) {
+      $queue_servers[$name] = $factory->getQueueServer($name);
+    }
+  }
+
+  return $queue_servers;
+}
 
 /**
  * Helper for Drush commands taking an optional server alias argument.
@@ -18,7 +56,7 @@ use Symfony\Component\Yaml\Yaml;
  *   Include server objects in the results.
  *
  * @return array
- *   An alias-indexed hash or server definitions, possibly including server
+ *   An alias-indexed hash of server definitions, possibly including server
  *   objects.
  */
 function _beanstalkd_get_servers($alias = NULL, $include_objects = FALSE) {
@@ -48,6 +86,24 @@ function _beanstalkd_get_servers($alias = NULL, $include_objects = FALSE) {
 }
 
 /**
+ * Gets the names of queues configured to be served by a given server.
+ *
+ * @param \Drupal\beanstalkd\Server\BeanstalkdServer $requested_server
+ *   The server.
+ *
+ * @return array
+ *   An array of queue names for this server.
+ */
+function _beanstalkd_get_server_tube_names(BeanstalkdServer $requested_server) {
+  $all_queues = _beanstalkd_get_queues();
+  $queues = array_filter($all_queues, function ($server, $name) use($requested_server) {
+    return $server === $requested_server;
+  }, ARRAY_FILTER_USE_BOTH);
+  $result = array_keys($queues);
+  return $result;
+}
+
+/**
  * Implements hook_drush_command().
  */
 function beanstalkd_drush_command() {
@@ -60,9 +116,26 @@ function beanstalkd_drush_command() {
       'all' => 'Also list workers not configured for Beanstalkd handling.',
     ],
   ];
+
+  $items['beanstalkd-run-server'] = [
+    'description' => 'Run work from any queue on a single server',
+    'aliases' => ['btrs'],
+    'arguments' => [
+      'server' => 'The name of the server. Defaults to the default server.',
+    ],
+  ];
+
   $items['beanstalkd-servers'] = [
     'aliases' => ['btsv'],
     'description' => 'List of all the beanstalkd servers',
+  ];
+
+  $items['beanstalkd-queue-stats'] = [
+    'description' => 'Display the stats for the specified queue',
+    'arguments' => [
+      'queue' => 'The name of the queue',
+    ],
+    'aliases' => array('btqs'),
   ];
 
   $items['beanstalkd-server-queues'] = [
@@ -79,14 +152,6 @@ function beanstalkd_drush_command() {
       'server' => 'Specify the server to query',
     ],
     'aliases' => ['btss'],
-  ];
-
-  $items['beanstalkd-queue-stats'] = [
-    'description' => 'Display the stats for the specified queue',
-    'arguments' => [
-      'queue' => 'The name of the queue',
-    ],
-    'aliases' => array('btqs'),
   ];
 
   // ---- Old commands below ---------------------------------------------------
@@ -178,26 +243,7 @@ function drush_beanstalkd_drupal_queues() {
  *   The name of the Beanstalkd queue for which to get Beanstalkd information.
  */
 function drush_beanstalkd_queue_stats($name = NULL) {
-  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
-  $factory = \Drupal::service('beanstalkd.server.factory');
-  $mappings = array_flip(array_keys($factory->getQueueMappings()));
-
-  /* @var \Drupal\beanstalkd\WorkerManager $manager */
-  $manager = \Drupal::service('beanstalkd.worker_manager');
-  $drupal_queues = array_flip($manager->getBeanstalkdQueues());
-
-  if (!empty($name)) {
-    $server = $factory->getQueueServer($name);
-    $queue_servers = [$name => $server];
-  }
-  else {
-    $names = array_keys($mappings + $drupal_queues);
-    $queue_servers = [];
-
-    foreach ($names as $name) {
-      $queue_servers[$name] = $factory->getQueueServer($name);
-    }
-  }
+  $queue_servers = _beanstalkd_get_queues($name);
 
   $result = [];
   /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
@@ -207,6 +253,82 @@ function drush_beanstalkd_queue_stats($name = NULL) {
     $result[$name] = $stats;
   }
   drush_print(Yaml::dump($result));
+}
+
+/**
+ * Drush callback for 'beanstalkd-run-server'.
+ *
+ * @param null|string $alias
+ *   The alias for the server from which to fetch jobs.
+ */
+function drush_beanstalkd_run_server($alias = NULL) {
+  if (!isset($alias)) {
+    $alias = BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS;
+  }
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
+  $factory = \Drupal::service('beanstalkd.server.factory');
+
+  $server = $factory->get($alias);
+  $tubes = _beanstalkd_get_server_tube_names($server);
+
+  $server->addWatches($tubes);
+
+  /* @var \Drupal\Core\Queue\QueueWorkerManagerInterface $manager */
+  $manager = \Drupal::service('plugin.manager.queue_worker');
+
+  $time_limit = intval(drush_get_option('time-limit'));
+  $verbose = !!drush_get_option('verbose');
+  if ($verbose) {
+    $names = implode(', ', $tubes);
+    drush_print(dt("Handling tubes: @tubes", ['@tubes' => $names]));
+  }
+
+  $start = time();
+  $end = time() + $time_limit;
+  $count = 0;
+
+  while ((!$time_limit || time() < $end) && ($job = $server->claimJobFromAnyTube())) {
+    try {
+      $stats = $server->statsJob(NULL, $job);
+      $tube = $stats['tube'];
+      drush_log(dt('Processing item @id from queue "@tube" on server "@name".', [
+        '@name' => $alias,
+        '@id' => $job->getId(),
+        '@tube' => $tube,
+      ]), 'info');
+
+      try {
+        $worker = $manager->createInstance($tube);
+        $worker->processItem($job->getData());
+      }
+      catch (PluginNotFoundException $e) {
+        drush_set_error('DRUSH_PLUGIN_NOT_FOUND_EXCEPTION', $e->getMessage());
+        $worker = NULL;
+      }
+
+      // If there is no worker for this job, there is no point in keeping it.
+      $server->deleteJob($tube, $job->getId());
+      $count++;
+    }
+    catch (SuspendQueueException $e) {
+      // If the worker indicates there is a problem with the whole queue,
+      // release the item and skip to the next queue.
+      $server->releaseJob($job);
+      drush_set_error('DRUSH_SUSPEND_QUEUE_EXCEPTION', $e->getMessage());
+    }
+    catch (\Exception $e) {
+      // In case of any other kind of exception, log it and leave the item
+      // in the queue to be processed again later.
+      drush_set_error('DRUSH_QUEUE_EXCEPTION', $e->getMessage());
+    }
+  }
+
+  $elapsed = microtime(TRUE) - $start;
+  drush_log(dt('Processed @count items from the @name server in @elapsed sec.', [
+    '@count' => $count,
+    '@name' => $alias,
+    '@elapsed' => round($elapsed, 2),
+  ]), drush_get_error() ? 'warning' : 'ok');
 }
 
 /**
