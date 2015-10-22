@@ -1,0 +1,4 @@
+access beanstalkd stats:
+  title: 'Access Beanstalkd Stats'
+  description: 'Access the statistics report for the beanstalkd server.'
+  restrict access: TRUE

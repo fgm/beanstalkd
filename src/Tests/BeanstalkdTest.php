@@ -6,48 +6,43 @@
  * http://drupal.org/project/simpletest
  */
 
+namespace Drupal\beanstalkd\Tests;
+
+use Drupal\simpletest\WebTestBase;
+
 /**
  * Test the basic queue functionality.
+ *
+ * @group beanstalkd
  */
-class BeanstalkdTestCase extends DrupalWebTestCase {
-  /**
-   * {@inheritdoc}
-   */
-  public static function getInfo() {
-    return array(
-      'name' => 'Beanstalkd Queue',
-      'description' => 'Queues and dequeues a set of items to check the basic queue functionality.',
-      'group' => 'Drupal Queue',
-    );
-  }
+class BeanstalkdTest extends WebTestBase {
+
+  public static $modules = ['beanstalkd'];
 
   /**
-   * {@inheritdoc}
-   */
-  public function setUp() {
-    parent::setUp('beanstalkd');
-  }
-
-  /**
-   * Queues and dequeues a set of items to check the basic queue functionality.
+   * Queues and de-queues a set of items to check the basic queue functionality.
    */
   function testQueue() {
     // Create two queues.
-    // Set random queues to use beanstalkd.
-    $name1 = $this->randomName();
-    $name2 = $this->randomName();
-    variable_set('queue_class_' . $name1, 'QueueBeanstalkd');
-    variable_set('queue_class_' . $name2, 'QueueBeanstalkd');
 
-    $queue1 = DrupalQueue::get($name1);
+    // Set random queues to use beanstalkd
+    $name1 = $this->randomMachineName();
+    $name2 = $this->randomMachineName();
+    // FIXME find a replacement for these settings, which are not config.
+    // variable_set('queue_class_' . $name1, 'QueueBeanstalkd');
+    // variable_set('queue_class_' . $name2, 'QueueBeanstalkd');
+
+    /** @var \Drupal\Core\Queue\QueueFactory $factory */
+    $factory = \Drupal::service('queue');
+    $queue1 = $factory->get($name1);
     $queue1->createQueue();
-    $queue2 = DrupalQueue::get($name2);
+    $queue2 = $factory->get($name2);
     $queue2->createQueue();
 
     // Create four items.
     $data = array();
     for ($i = 0; $i < 4; $i++) {
-      $data[] = array($this->randomName() => $this->randomName());
+      $data[] = array($this->randomMachineName() => $this->randomMachineName());
     }
 
     // Queue items 1 and 2 in the queue1.
@@ -64,7 +59,7 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
     $items[] = $item = $queue1->claimItem();
     $new_items[] = $item->data;
 
-    // First two dequeued items should match the first two items we queued.
+    // First two de-queued items should match the first two items we queued.
     $this->assertEqual($this->queueScore($data, $new_items), 2, t('Two items matched'));
 
     // Add two more items.
@@ -80,7 +75,7 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
     $items[] = $item = $queue1->claimItem();
     $new_items[] = $item->data;
 
-    // All dequeued items should match the items we queued exactly once,
+    // All de-queued items should match the items we queued exactly once,
     // therefore the score must be exactly 4.
     $this->assertEqual($this->queueScore($data, $new_items), 4, t('Four items matched'));
 
@@ -99,8 +94,13 @@ class BeanstalkdTestCase extends DrupalWebTestCase {
 
   /**
    * This function returns the number of equal items in two arrays.
+   *
+   * @param mixed[] $items
+   * @param mixed[] $new_items
+   *
+   * @return int
    */
-  public function queueScore($items, $new_items) {
+  function queueScore($items, $new_items) {
     $score = 0;
     foreach ($items as $item) {
       foreach ($new_items as $new_item) {

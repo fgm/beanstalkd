@@ -5,57 +5,79 @@
  * Provide core implementation of beanstalkd support for Queues
  */
 
-use Pheanstalk\PheanstalkInterface;
-use Drupal\beanstalkd\Queue\QueueBeanstalkd;
+use Drupal\Core\Queue\QueueWorkerManager;
+use Drupal\Core\Site\Settings;
 
 /**
- * Implements hook_menu().
+ * Implements hook_libraries_info().
  */
-function beanstalkd_menu() {
-  $items = array();
+function beanstalkd_libraries_info() {
+  $info = array();
 
-  $items['admin/reports/beanstalkd'] = array(
-    'title' => 'Beanstalkd Stats',
-    'description' => 'Retreives statistics from the beanstalkd server.',
-    'route_name' => 'beanstalkd.admin',
-  );
-
-  return $items;
-}
-
-
-/**
- * Implements hook_permission().
- */
-function beanstalkd_permission() {
-  return array(
-    'access beanstalkd stats' => array(
-      'title' => t('Access Beanstalkd Stats'),
-      'description' => t('Access the statistics report for the beanstalkd server.'),
-      'restrict access' => TRUE,
+  $info['pheanstalk'] = array(
+    'name' => t('Pheanstalk'),
+    'vendor url' => 'https://github.com/pda/pheanstalk',
+    'download url' => 'https://github.com/pda/pheanstalk/tags',
+    'path' => 'classes',
+    'version arguments' => array(
+      'file' => 'classes/Pheanstalk/Pheanstalk.php',
+      'pattern' => '/VERSION\s+=\s+\'(\d+\.\d+\.\d+)\';/',
+      'lines' => 20,
+      'cols' => 255,
+    ),
+    'files' => array(
+      'php' => array('Pheanstalk/PheanstalkInterface.php'),
+    ),
+    'callbacks' => array(
+      'post-load' => array('beanstalkd_init_pheanstalk'),
     ),
   );
+
+  return $info;
+}
+
+function beanstalkd_init_pheanstalk($library) {
+  if ($library['loaded']) {
+    $autoloader = \Drupal::service('class_loader');
+    $autoloader->add('Pheanstalk', DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
+  }
 }
 
 /**
- * Get Queue Parameters.
+ * Load the pheanstalk library.
+ */
+function beanstalkd_load_pheanstalk() {
+  $library = libraries_load('pheanstalk');
+
+  if (!$library['loaded']) {
+    throw new Exception('Unable to load Pheanstalk library');
+  }
+
+  return TRUE;
+}
+
+/**
+ * Get Queue Parameters
+ *
+ * @param string $name
+ *   Queue name.
  */
 function beanstalkd_get_queue_options($name) {
   static $options = array();
 
   if (!isset($options[$name])) {
-    $options[$name] = settings()->get('beanstalk_queue_' . $name, array());
-    $defaults = settings()->get('beanstalk_default_queue', array()) + array(
-      'host' => settings()->get('beanstalkd_host', 'localhost'),
-      'port' => settings()->get('beanstalkd_port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT),
+    $options[$name] = Settings::get('beanstalk_queue_' . $name, array());
+    $defaults = Settings::get('beanstalk_default_queue', array()) + array(
+      'host' => Settings::get('beanstalkd_host', 'localhost'),
+      'port' => Settings::get('beanstalkd_port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT),
       'fork' => FALSE,
       'reserve_timeout' => 0,
-      'ttr' => PheanstalkInterface::DEFAULT_TTR,
-      'priority' => PheanstalkInterface::DEFAULT_PRIORITY,
-      'release_delay' => PheanstalkInterface::DEFAULT_DELAY,
+      'ttr' => \Pheanstalk_PheanstalkInterface::DEFAULT_TTR,
+      'priority' => \Pheanstalk_PheanstalkInterface::DEFAULT_PRIORITY,
+      'release_delay' => \Pheanstalk_PheanstalkInterface::DEFAULT_DELAY,
       'forked_extra_timeout' => FALSE,
       'forked_extra_items' => FALSE,
-      'delay' => PheanstalkInterface::DEFAULT_DELAY,
+      'delay' => \Pheanstalk_PheanstalkInterface::DEFAULT_DELAY,
     );
     $options[$name] += $defaults;
   }
@@ -67,32 +89,31 @@ function beanstalkd_get_queue_options($name) {
  * Get a list of all queues which have drush enabled.
  *
  * @param string $host
- *   The list of all the queue which are using this specified host
+ *  The list of all the queues which are using this specified host
+ * @param string $queue_name
+ *  Queue name.
  *
  * @return array
- *   If a host is specified then it returns an array of all the settings for the queue.
- *   otherwise if no host is specified then it will return an array keyed by host for all
- *   with the settings for all queues.
+ *  If a host is specified then it returns an array of all the settings for the queue.
+ *  otherwise if no host is specified then it will return an array keyed by host for all
+ *  with the settings for all queues.
  */
 function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   static $queue_list;
 
   if (!isset($queue_list)) {
+    $mh = \Drupal::moduleHandler();
     $queue_list = array();
-    $cron_queues = module_invoke_all('queue_info');
-    drupal_alter('queue_info', $cron_queues);
+    /** @var \Drupal\Core\Queue\QueueWorkerManagerInterface $worker_manager */
+    $worker_manager = \Drupal::service('plugin.manager.queue_worker');
+    $queue_definitions = $worker_manager->getDefinitions();
 
-    // Additionally, check for modules implementing hook_queue_info.
-    $queues = module_invoke_all('queue_info');
-    drupal_alter('queue_info', $queues);
-    $queues = array_merge($queues, $cron_queues);
-
-    foreach ($queues as $queue => $settings) {
+    foreach ($queue_definitions as $queue => $definition) {
       $name = 'queue_service_' . $queue;
       $options = beanstalkd_get_queue_options($queue);
-      if (settings()->get($name, settings()->get('queue_default', 'queue.system')) == 'queue.beanstalkd') {
-        $settings['options'] = $options;
-        $queue_list[$options['host'] . ':' . $options['port']][$queue] = $settings;
+      if (Settings::get($name, Settings::get('queue_default', 'queue.system')) == 'queue.beanstalkd') {
+        $definition['options'] = $options;
+        $queue_list[$options['host'] . ':' . $options['port']][$queue] = $definition;
       }
     }
   }
@@ -108,9 +129,6 @@ function beanstalkd_get_host_queues($host = NULL, $queue_name = NULL) {
   return $queue_list;
 }
 
-/**
- * Get beanstalkd queues.
- */
 function beanstalkd_get_queues($hostname = NULL) {
   $queues = beanstalkd_get_host_queues($hostname);
 

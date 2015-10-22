@@ -4,6 +4,7 @@
  * @file
  */
 use Drupal\beanstalkd\Queue\QueueBeanstalkd;
+use Drupal\Component\Utility\Unicode;
 
 /**
  * Implementation of hook_drush_command().
@@ -33,7 +34,7 @@ function beanstalkd_drush_command() {
     'arguments' => array(
       'queue' => 'specify the name of the queue',
     ),
-    'aliases' => array('queue-stats'), 
+    'aliases' => array('queue-stats'),
   );
   $items['beanstalkd-item-stats'] = array(
     'callback' => 'drush_beanstalkd_item_stats',
@@ -103,7 +104,7 @@ function beanstalkd_drush_command() {
 function drush_beanstalkd_servers() {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
-  
+
   drush_print('Available beanstalkd servers:');
   drush_print("\n" . implode("\n", array_keys($queues)));
 }
@@ -111,42 +112,42 @@ function drush_beanstalkd_servers() {
 function drush_beanstalkd_server_stats($host = NULL) {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
-  
+
   if ($host) {
-    $hostinfo = parse_url($host) + array('port' => \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
-    if (!isset($hostinfo['host']) && isset($hostinfo['path'])) {
-      $hostinfo['host'] = $hostinfo['path'];
-      unset($hostinfo['path']);
-    } 
-    $host = $hostinfo['host'] . ':' . $hostinfo['port'];
+    $host_info = parse_url($host) + array('port' => \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
+    if (!isset($host_info['host']) && isset($host_info['path'])) {
+      $host_info['host'] = $host_info['path'];
+      unset($host_info['path']);
+    }
+    $host = $host_info['host'] . ':' . $host_info['port'];
   }
-  
+
+  $queue_ids = array_keys($queues);
   if (count($queues) > 1) {
-    $options = drupal_map_assoc(array_keys($queues));
+    $options = array_combine($queue_ids, $queue_ids);
     $host = drush_choice($options, 'Select a host to query');
   }
   elseif (!$host) {
-    $host = reset(array_keys($queues));
+    $host = reset($queue_ids);
   }
+  unset($queue_ids);
 
   if ($host && isset($queues[$host])) {
-    // Grab the first queue for the hostname and port
-    $info = reset($queues[$host]);
-    $hostinfo = parse_url($host);
+    $host_info = parse_url($host);
 
     $queue = new QueueBeanstalkd(NULL);
-    $queue->createConnection($hostinfo['host'], $hostinfo['port']);
-    
+    $queue->createConnection($host_info['host'], $host_info['port']);
+
     $stats = $queue->stats();
-    
+
     $rows = array();
     foreach ($stats as $key => $stat) {
       $rows[] = array(
-        drupal_ucfirst(str_replace('-', ' ', $key)),
+        Unicode::ucfirst(str_replace('-', ' ', $key)),
         $stat,
       );
     }
-    
+
     drush_print_table($rows);
   }
   elseif ($host) {
@@ -170,24 +171,25 @@ function drush_beanstalkd_queue_list() {
 function drush_beanstalkd_queue_stats($name = NULL) {
   beanstalkd_load_pheanstalk();
 
-  $names = drupal_map_assoc(beanstalkd_get_queues());
+  $queues = beanstalkd_get_queues();
+  $names = array_combine($queues, $queues);
 
   if (!$name) {
     $name = drush_choice($names, 'Select a queue to query');
   }
-  
+
   if ($name && isset($names[$name])) {
     $queue = new QueueBeanstalkd($name);
     $stats = $queue->statsTube($name);
-    
+
     $rows = array();
     foreach ($stats as $key => $stat) {
       $rows[] = array(
-        drupal_ucfirst(str_replace('-', ' ', $key)),
+        Unicode::ucfirst(str_replace('-', ' ', $key)),
         $stat,
       );
     }
-    
+
     drush_print_table($rows);
   }
 }
@@ -195,7 +197,7 @@ function drush_beanstalkd_queue_stats($name = NULL) {
 function drush_beanstalkd_item_stats($item_id = NULL) {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
-  
+
   if ($name = drush_get_option('queue', NULL)) {
     $info = beanstalkd_get_host_queues(NULL, $name);
     $host = $info['options']['host'];
@@ -205,7 +207,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
     $host = drush_get_option('host', 'localhost');
     $port = drush_get_option('port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
   }
-  
+
   $hostname = $host . ':' . $port;
 
   if (isset($queues[$hostname])) {
@@ -219,7 +221,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
         $rows = array();
         foreach ($stats as $key => $stat) {
           $rows[] = array(
-            drupal_ucfirst(str_replace('-', ' ', $key)),
+            Unicode::ucfirst(str_replace('-', ' ', $key)),
             $stat,
           );
         }
@@ -251,10 +253,20 @@ function drush_beanstalkd_peek_delayed($name = NULL) {
   drush_beanstalkd_peek_items('delayed', $name);
 }
 
-function drush_beanstalkd_peek_items($type, $name) {
+/**
+ * FIXME probably incorrect logic: $name argument is overwritten in both cases.
+ *
+ * @param $type
+ * @param $name
+ *
+ * @throws \Exception
+ */
+function drush_beanstalkd_peek_items($type,
+  /** @noinspection PhpUnusedParameterInspection */
+  $name) {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
-  
+
   if ($name = drush_get_option('queue', NULL)) {
     $info = beanstalkd_get_host_queues(NULL, $name);
     $host = $info['options']['host'];
@@ -271,7 +283,8 @@ function drush_beanstalkd_peek_items($type, $name) {
     $queue = new QueueBeanstalkd(NULL);
     $queue->createConnection($host, $port);
 
-    $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
+    $queues = beanstalkd_get_queues($hostname);
+    $names = array_combine($queues, $queues);
     _drush_beanstalkd_filter_type($queue, $type, TRUE);
     $names = array_filter($names, '_drush_beanstalkd_filter_type');
 
@@ -291,15 +304,15 @@ function drush_beanstalkd_peek_items($type, $name) {
 
     try {
       $queue->useTube($name);
-      $item = $queue->{'peek' . drupal_ucfirst($type)}();
+      $item = $queue->{'peek' . Unicode::ucfirst($type)}();
       $stats = $queue->statsJob($item);
       $rows = array();
       foreach ($stats as $key => $stat) {
         $rows[] = array(
-          drupal_ucfirst(str_replace('-', ' ', $key)),
+          Unicode::ucfirst(str_replace('-', ' ', $key)),
           $stat,
         );
-        
+
         if ($key == 'id') {
           $info = beanstalkd_get_host_queues(NULL, $item->name);
           if (isset($info['description callback']) && function_exists($info['description callback'])) {
@@ -322,15 +335,29 @@ function drush_beanstalkd_peek_items($type, $name) {
   }
 }
 
+/**
+ * Callback for array_filter() in drush_beanstalkd_{kick|_peek_items}().
+ *
+ * @param string $a
+ *   A queue name.
+ * @param null $b
+ *   Unused.
+ * @param bool $init
+ *   - NULL if $init,
+ *   - TRUE if queue is available and contains at least one item
+ *   - FALSE otherwise.
+ *
+ * @return bool|null
+ */
 function _drush_beanstalkd_filter_type($a, $b = NULL, $init = FALSE) {
   static $queue, $type;
-  
+
   if ($init) {
     $queue = $a;
     $type = $b;
-    return;
+    return NULL;
   }
-  
+
   try {
     $stats = $queue->statsTube($a);
     return $stats['current-jobs-' . $type] > 0 ? TRUE : FALSE;
@@ -351,9 +378,8 @@ function drush_beanstalkd_kick($items = NULL) {
   }
 
   beanstalkd_load_pheanstalk();
-  drupal_queue_include();
   $queues = beanstalkd_get_host_queues();
-  
+
   if ($name = drush_get_option('queue', NULL)) {
     $info = beanstalkd_get_host_queues(NULL, $name);
     $host = $info['options']['host'];
@@ -365,14 +391,15 @@ function drush_beanstalkd_kick($items = NULL) {
   }
 
   $hostname = $host . ':' . $port;
-  
+
   $name = drush_get_option('queue', NULL);
 
   if (isset($queues[$hostname])) {
     $queue = new QueueBeanstalkd(NULL);
     $queue->createConnection($host, $port);
 
-    $names = drupal_map_assoc(beanstalkd_get_queues($hostname));
+    $queues = beanstalkd_get_queues($hostname);
+    $names = array_combine($queues, $queues);
     _drush_beanstalkd_filter_type($queue, 'buried', TRUE);
     $names = array_filter($names, '_drush_beanstalkd_filter_type');
 
@@ -395,10 +422,10 @@ function drush_beanstalkd_kick($items = NULL) {
       drush_log(dt('There are currently buried items on queue @name', array('@name' => $name)), 'error');
       return;
     }
-    
+
     $queue->useTube($name);
     $items_kicked = $queue->kick($items);
-    
-    drush_log(format_plural($items_kicked, '@count item kicked', '@count items kicked'), 'info');
+
+    drush_log(\Drupal::translation()->formatPlural($items_kicked, '@count item kicked', '@count items kicked'), 'info');
   }
 }
