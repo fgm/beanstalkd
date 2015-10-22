@@ -102,6 +102,74 @@ class AdminController implements ContainerInjectionInterface {
   }
 
   /**
+   * Dispatch statistics to bins by statistic type.
+   *
+   * @param array $stat_types
+   *   The statistic types, indexed by regex.
+   * @param array $stats
+   *   The statistics to dispatch.
+   *
+   * @return array
+   *   An array of stats grouped by statistic type.
+   */
+  protected function dispatchStatsToBins(array $stat_types, array $stats) {
+    $bins = [];
+    foreach (array_keys($stat_types) as $regex) {
+      $bins[$regex] = [];
+    }
+
+    ksort($stats);
+    foreach ($stats as $stat => $value) {
+      // No need to clean the key, Twig will take care of it.
+      // Depending on the key, format the value as appropriate.
+      $value = $this->formatValue($stat, $value);
+      foreach ($bins as $regex => &$data) {
+        if (preg_match($regex, $stat)) {
+          $data[] = [
+            ['data' => $stat],
+            ['data' => $value],
+          ];
+          break;
+        }
+      }
+    }
+
+    return $bins;
+  }
+
+  /**
+   * Build the flat structure of table rows from statistics bins.
+   *
+   * @param array $bins
+   *   The stats-by-type bins.
+   *
+   * @return array
+   *   The tables rows.
+   */
+  protected function buildTableRows(array $bins) {
+    $max_height = max(array_map(function (array $column) {
+      return count($column);
+    }, $bins));
+
+    foreach ($bins as &$column) {
+      $column = array_pad($column, $max_height, ['', '']);
+    }
+
+    $rows = [];
+    for ($row_index = 0; $row_index < $max_height; $row_index++) {
+      $row = [];
+      foreach ($bins as $stats) {
+        list($name, $stat) = $stats[$row_index];
+        $row[] = $name;
+        $row[] = $stat;
+      }
+      $rows[] = $row;
+    }
+
+    return $rows;
+  }
+
+  /**
    * BeanstalkD Queue Stats Callback.
    */
   public function adminStats() {
@@ -122,7 +190,7 @@ class AdminController implements ContainerInjectionInterface {
         '#rows' => $rows,
       ];
 
-      $server = $this->serverFactory->get("z" . $alias);
+      $server = $this->serverFactory->get($alias);
       $stats = $server->stats('global')->getArrayCopy();
 
       if ($stats === FALSE) {
@@ -132,21 +200,15 @@ class AdminController implements ContainerInjectionInterface {
           ]),
         ];
       }
-      $header = [
-        t('Property'),
-        t('Value'),
+      $stat_types = [
+        '/^cmd-/' => ['data' => t('Command counts'), 'colspan' => 2],
+        '/^current-/' => ['data' => t('Current state'), 'colspan' => 2],
+        '/.*/' => ['data' => t('Miscellaneous'), 'colspan' => 2],
       ];
-      $rows = [];
-      ksort($stats);
-      foreach ($stats as $stat => $value) {
-        // No need to clean the key, Twig will take care of it.
-        // Depending on the key, format the value as appropriate.
-        $value = $this->formatValue($stat, $value);
-        $rows[] = [
-          ['data' => $stat],
-          ['data' => $value],
-        ];
-      }
+      $header = array_values($stat_types);
+
+      $bins = $this->dispatchStatsToBins($stat_types, $stats);
+      $rows = $this->buildTableRows($bins);
 
       $section[$alias . '-stats'] = [
         '#type' => 'table',
