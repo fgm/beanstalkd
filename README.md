@@ -20,7 +20,7 @@ Requirements
   * Drupal 8.0.0-RC1 or more recent must be configured with Pheanstalk 3.x:  
     - edit `(yoursite)/composer.json` (not `(yoursite)/core/composer.json`)
     - insert: `"pda/pheanstalk": "^3.1"` in the `require` section and save.
-    - update your vendors by typing `composer update`
+    - update your vendors by typing `composer update` at the site root.
 
 
 Installation

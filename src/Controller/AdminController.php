@@ -7,7 +7,7 @@
 
 namespace Drupal\beanstalkd\Controller;
 
-use Drupal\beanstalkd\Queue\QueueBeanstalkd;
+use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
@@ -25,13 +25,23 @@ class AdminController implements ContainerInjectionInterface {
   protected $dateFormatter;
 
   /**
+   * The Beanstalkd server factory service.
+   *
+   * @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory
+   */
+  protected $serverFactory;
+
+  /**
    * Constructor.
    *
    * @param \Drupal\Core\Datetime\DateFormatterInterface $date_formatter
    *   The date formatter service.
+   * @param \Drupal\beanstalkd\Server\BeanstalkdServerFactory $server_factory
+   *   The Beanstalkd server factory service.
    */
-  public function __construct(DateFormatterInterface $date_formatter) {
+  public function __construct(DateFormatterInterface $date_formatter, BeanstalkdServerFactory $server_factory) {
     $this->dateFormatter = $date_formatter;
+    $this->serverFactory = $server_factory;
   }
 
   /**
@@ -46,74 +56,113 @@ class AdminController implements ContainerInjectionInterface {
   public static function create(ContainerInterface $container) {
     /* @var \Drupal\Core\DateTime\DateFormatterInterface $formatter */
     $formatter = $container->get('date.formatter');
-    return new static($formatter);
+
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $server_factory */
+    $server_factory = $container->get('beanstalkd.server.factory');
+
+    return new static($formatter, $server_factory);
+  }
+
+  /**
+   * Helper for statistics table.
+   *
+   * @param string $stat
+   *   The name of a statistic.
+   * @param mixed $value
+   *   A raw statistic.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
+   *   A statistic formatted for human usage.
+   */
+  protected function formatValue($stat, $value) {
+    switch ($stat) {
+      case 'uptime':
+        // Format 'interval' keys.
+        $value = $this->dateFormatter->formatInterval($value);
+        break;
+
+      // Format 'data size' keys.
+      case 'binlog-max-size':
+      case 'max-job-size':
+        $value = format_size($value);
+        break;
+
+      // Format 'short duration' keys.
+      case 'rusage-stime':
+      case 'rusage-utime':
+        $value = t('@seconds sec', ['@seconds' => $value]);
+        break;
+
+      // Default to a clean value: Twig will sanitize it.
+      default:
+        break;
+    }
+
+    return $value;
   }
 
   /**
    * BeanstalkD Queue Stats Callback.
    */
   public function adminStats() {
-    /* @method stats $queue */
-    $queue = new QueueBeanstalkd(NULL, TRUE);
-    if (!$error = $queue->getError()) {
-      // Generate an array of stats.
-      // PheanstalkInterface supports stats() via __call().
-      /* @var \Pheanstalk_PheanstalkInterface[] $stats */
-      $stats_array = $queue->stats();
+    $result = [];
 
-      /* @var \ArrayObject $stats */
-      $stats = reset($stats_array);
-      $stats->getArrayCopy();
+    $servers = $this->serverFactory->getServerDefinitions();
 
-      // Define the base variables for theme_table
-      $ret = array(
+    foreach ($servers as $alias => $definition) {
+      $section = [];
+
+      $definition['persistent'] = $definition['persistent'] ? t('Yes') : t('No');
+      $header = array_keys($definition);
+      $rows = [array_values($definition)];
+
+      $section[$alias . '-definition'] = [
         '#type' => 'table',
-        '#header' => array(
-          array('data' => t('Property')),
-          array('data' => t('Value')),
-        ),
-        'rows' => array(),
-      );
+        '#header' => $header,
+        '#rows' => $rows,
+      ];
 
-      // Loop over each stat and build it into the $variables['rows'] array.
-      foreach ($stats as $key => $value) {
+      $server = $this->serverFactory->get("z" . $alias);
+      $stats = $server->stats('global')->getArrayCopy();
+
+      if ($stats === FALSE) {
+        $section[$alias . '-stats'] = [
+          '#markup' => t('Error obtaining statistics from server @server', [
+            '@server' => $alias,
+          ]),
+        ];
+      }
+      $header = [
+        t('Property'),
+        t('Value'),
+      ];
+      $rows = [];
+      ksort($stats);
+      foreach ($stats as $stat => $value) {
         // No need to clean the key, Twig will take care of it.
         // Depending on the key, format the value as appropriate.
-        switch ($key) {
-          // Format 'interval' keys.
-          case 'uptime':
-            $value = $this->dateFormatter->formatInterval($value);
-            break;
-
-          // Format 'data size' keys.
-          case 'binlog-max-size':
-          case 'max-job-size':
-            $value = format_size($value);
-            break;
-
-          // Default to a clean value: Twig will sanitize it.
-          default:
-            break;
-        }
-
-        // Add the rows.
-        $ret['#rows'][] = array(
-          'data' => array(
-            array('data' => $key),
-            array('data' => $value),
-          ),
-        );
+        $value = $this->formatValue($stat, $value);
+        $rows[] = [
+          ['data' => $stat],
+          ['data' => $value],
+        ];
       }
 
-      return $ret;
+      $section[$alias . '-stats'] = [
+        '#type' => 'table',
+        '#header' => $header,
+        '#rows' => $rows,
+      ];
+
+      $result[$alias . '-section'] = [
+        '#type' => 'details',
+        '#title' => $alias,
+        '#open' => TRUE,
+        'definition' => $section,
+      ];
     }
-    else {
-      $message = t('Unable to connect to Beanstalkd: @error', [
-        '@error' => $error->getMessage(),
-      ]);
-      drupal_set_message($message, 'error');
-      return ['#markup' => ''];
-    }
+
+    return $result;
   }
 
 }

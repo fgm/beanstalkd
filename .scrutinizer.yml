@@ -75,8 +75,7 @@ checks:
 filter:
     excluded_paths:
         - src/Cli/*
-        - src/Controller/*
-        - src/Tests/BeanstalkdTest.php
+        - src/Tests/BeanstalkdTest.wasphp
         - runqueue.php
 coding_style:
     php:
