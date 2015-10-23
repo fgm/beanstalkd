@@ -6,13 +6,13 @@
 
 namespace Drupal\beanstalkd;
 
-use Drupal\beanstalkd\Server\BeanstalkdServer;
-use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Queue\QueueWorkerManagerInterface;
 use Drupal\Core\Queue\SuspendQueueException;
-use Psr\Log\LoggerInterface;
+use Drupal\beanstalkd\Server\BeanstalkdServer;
+use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Psr\Log\LogLevel;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class Runner contains code needed for CLI (Drush) operations.

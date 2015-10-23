@@ -7,6 +7,7 @@
 
 namespace Drupal\beanstalkd\Tests;
 
+use Drupal\Component\Utility\NestedArray;
 use Pheanstalk\Job;
 
 /**
@@ -237,6 +238,46 @@ class BeanstalkdServerTest extends BeanstalkdTestBase {
 
     $stats = $server->stats('job', $tube . $tube, $job);
     $this->assertFalse($stats, 'Asking for job stats for correct job on incorrect tube returns FALSE');
+
+    $this->cleanUp($server, $tube);
+  }
+
+  /**
+   * Test tube listing.
+   */
+  public function testTubes() {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+    list($server, $tube,) = $this->initServerWithTube();
+
+    $initial_tubes = $server->listTubes();
+    $initial_count = count($initial_tubes);
+    $extra_count = mt_rand(1, 5);
+
+    $tubes = [];
+    for ($i = 0; $i < $extra_count; $i++) {
+      $extra_tube = 'tube-' . $i;
+      $tubes[] = $extra_tube;
+      $server->addTube($extra_tube);
+    }
+    $server->addWatches($tubes);
+
+    $listed = $server->listTubes();
+
+    $actual = count($listed);
+    // Add 1 for the default tube.
+    $expected = $initial_count + $extra_count;
+    $this->assertEquals($expected, $actual, 'The correct number of tubes is found');
+
+    $actual = $listed;
+    sort($listed);
+    $expected = array_merge($initial_tubes, $tubes);
+    sort($tubes);
+    $this->assertEquals($expected, $actual, 'The correct tubes are found.');
+
+    // Only remove tubes created for the test.
+    foreach ($tubes as $extra_tube) {
+      $server->releaseTube($extra_tube);
+    }
 
     $this->cleanUp($server, $tube);
   }

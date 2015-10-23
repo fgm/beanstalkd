@@ -5,11 +5,8 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Component\Utility\Unicode;
-use Drupal\Core\Queue\SuspendQueueException;
 use Drupal\beanstalkd\Queue\BeanstalkdQueue;
-use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Symfony\Component\Yaml\Yaml;
 
 /**

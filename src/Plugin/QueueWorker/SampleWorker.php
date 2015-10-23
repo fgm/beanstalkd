@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Pretend to perform some work.
  *
  * @QueueWorker(
- *   id = "beanstalk_example",
+ *   id = "beanstalkd_example",
  *   title = @Translation("Beanstalkd example worker"),
  *   cron = {"time" = 60}
  * )
