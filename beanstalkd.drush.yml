@@ -1,0 +1,88 @@
+commands:
+  beanstalkd-drupal-queues:
+    aliases: ['btdq']
+    description: 'List configured Drupal drush queue settings'
+    options:
+      all: 'Also list workers not configured for Beanstalkd handling.'
+
+  beanstalkd-run-server:
+    aliases: ['btrs']
+    arguments:
+      server: 'The name of the server. Defaults to the default server.'
+    description: 'Run work from any queue on a single server'
+
+  beanstalkd-servers:
+    aliases: ['btsv']
+    description: 'List of all the beanstalkd servers'
+
+  beanstalkd-queue-stats:
+    aliases: ['btqs']
+    arguments:
+      queue: 'The name of the queue'
+    description: 'Display the stats for the specified queue'
+
+  beanstalkd-server-queues:
+    aliases: ['btsq']
+    arguments:
+      server: 'Specify the server to query'
+    description: 'List Beanstalkd queues on one or all servers'
+
+  beanstalkd-server-stats:
+    aliases: ['btss']
+    arguments:
+      server: 'Specify the server to query'
+    description: 'Return the Beanstalkd stats for one or all servers'
+
+  # Old commands, to be reconsidered.
+
+  beanstalkd-item-stats:
+    callback: 'drush_beanstalkd_item_stats'
+    description: 'Displays stats for a specified job in the queue'
+    arguments:
+      'item id': 'Item id to display the stats for.'
+    options:
+      host: 'Specify the host of the beanstalkd server'
+      port: 'Specify the port of the beanstalkd server'
+      queue: 'Specify the queue which the job exists.'
+    aliases: ['item-stats']
+
+  beanstalkd-peek-ready:
+    arguments:
+      queue: 'Queue to inspect for ready items'
+    callback: 'drush_beanstalkd_peek_ready'
+    description: 'Display the next job which is ready to be run.'
+    options:
+      host: 'Specify the host of the beanstalkd server'
+      port: 'Specify the port of the beanstalkd server'
+    aliases: ['peek-ready']
+
+  beanstalkd-peek-buried:
+    arguments:
+      queue: 'Queue to inspect for buried items'
+    callback: 'drush_beanstalkd_peek_buried'
+    description: 'Display the next job which has been buried.'
+    options:
+      host: 'Specify the host of the beanstalkd server'
+      port: 'Specify the port of the beanstalkd server'
+    aliases: ['peek-buried']
+
+  beanstalkd-peek-delayed:
+    arguments:
+      queue: 'Queue to inspect for delayed items'
+    callback: 'drush_beanstalkd_peek_delayed'
+    description: 'Display the next job which has been delayed.'
+    options:
+      host: 'Specify the host of the beanstalkd server'
+      port: 'Specify the port of the beanstalkd server'
+    aliases: ['peek-delayed']
+
+  beanstalkd-kick:
+    arguments:
+      '': 'number of items to kick to allow them to be reprocessed.'
+    callback: 'drush_beanstalkd_kick'
+    description: 'Kick n items so that they will be reprocessed'
+    options:
+      host: 'Specify the host of the beanstalkd server'
+      port: 'Specify the port of the beanstalkd server'
+      queue: 'Specify the queue to kick the items on.'
+    aliases: ['kick']

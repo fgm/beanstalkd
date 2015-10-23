@@ -5,7 +5,6 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\beanstalkd\Server\BeanstalkdServer;
 use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Component\Utility\Unicode;
@@ -14,209 +13,12 @@ use Drupal\Core\Queue\SuspendQueueException;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Return the combined list of queue workers and queues with a mapping.
- *
- * @param null|string $name
- *   If passed, the only queue exposed in the results.
- *
- * @return array
- *   A queue-name-indexed hash of BeanstalkdServer instances.
- */
-function _beanstalkd_get_queues($name = NULL) {
-  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
-  $factory = \Drupal::service('beanstalkd.server.factory');
-  $mappings = array_flip(array_keys($factory->getQueueMappings()));
-
-  /* @var \Drupal\beanstalkd\WorkerManager $manager */
-  $manager = \Drupal::service('beanstalkd.worker_manager');
-  $drupal_queues = array_flip($manager->getBeanstalkdQueues());
-
-  if (!empty($name)) {
-    $server = $factory->getQueueServer($name);
-    $queue_servers = [$name => $server];
-  }
-  else {
-    $names = array_keys($mappings + $drupal_queues);
-    $queue_servers = [];
-
-    foreach ($names as $name) {
-      $queue_servers[$name] = $factory->getQueueServer($name);
-    }
-  }
-
-  return $queue_servers;
-}
-
-/**
- * Helper for Drush commands taking an optional server alias argument.
- *
- * @param null|string $alias
- *   A server alias.
- * @param bool $include_objects
- *   Include server objects in the results.
- *
- * @return array
- *   An alias-indexed hash of server definitions, possibly including server
- *   objects.
- */
-function _beanstalkd_get_servers($alias = NULL, $include_objects = FALSE) {
-  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
-  $factory = \Drupal::service('beanstalkd.server.factory');
-  $all_servers = $factory->getServerDefinitions();
-
-  if (isset($alias)) {
-    if (isset($all_servers[$alias])) {
-      $servers = array_intersect_key($all_servers, [$alias => NULL]);
-    }
-    else {
-      drush_set_error('beanstalkd', t('@host is not a known server.', ['@host' => $alias]));
-      return [$alias => FALSE];
-    }
-  }
-  else {
-    $servers = $all_servers;
-  }
-
-  if ($include_objects) {
-    foreach ($servers as $alias => &$definition) {
-      $definition['server'] = $factory->get($alias);
-    }
-  }
-  return $servers;
-}
-
-/**
- * Gets the names of queues configured to be served by a given server.
- *
- * @param \Drupal\beanstalkd\Server\BeanstalkdServer $requested_server
- *   The server.
- *
- * @return array<integer|string>
- *   An array of queue names for this server.
- */
-function _beanstalkd_get_server_tube_names(BeanstalkdServer $requested_server) {
-  $all_queues = _beanstalkd_get_queues();
-  $queues = array_filter($all_queues, function ($server) use($requested_server) {
-    return $server === $requested_server;
-  }, ARRAY_FILTER_USE_BOTH);
-  $result = array_keys($queues);
-  return $result;
-}
-
-/**
  * Implements hook_drush_command().
  */
 function beanstalkd_drush_command() {
-  $items = array();
-  // ---- New-style commands ---------------------------------------------------
-  $items['beanstalkd-drupal-queues'] = [
-    'description' => 'List configured Drupal drush queue settings',
-    'aliases' => ['btdq'],
-    'options' => [
-      'all' => 'Also list workers not configured for Beanstalkd handling.',
-    ],
-  ];
-
-  $items['beanstalkd-run-server'] = [
-    'description' => 'Run work from any queue on a single server',
-    'aliases' => ['btrs'],
-    'arguments' => [
-      'server' => 'The name of the server. Defaults to the default server.',
-    ],
-  ];
-
-  $items['beanstalkd-servers'] = [
-    'aliases' => ['btsv'],
-    'description' => 'List of all the beanstalkd servers',
-  ];
-
-  $items['beanstalkd-queue-stats'] = [
-    'description' => 'Display the stats for the specified queue',
-    'arguments' => [
-      'queue' => 'The name of the queue',
-    ],
-    'aliases' => array('btqs'),
-  ];
-
-  $items['beanstalkd-server-queues'] = [
-    'description' => 'List Beanstalkd queues on one or all servers',
-    'arguments' => [
-      'server' => 'Specify the server to query',
-    ],
-    'aliases' => ['btsq'],
-  ];
-
-  $items['beanstalkd-server-stats'] = [
-    'description' => 'Return the Beanstalkd stats for one or all servers',
-    'arguments' => [
-      'server' => 'Specify the server to query',
-    ],
-    'aliases' => ['btss'],
-  ];
-
-  // ---- Old commands below ---------------------------------------------------
-  $items['beanstalkd-item-stats'] = array(
-    'callback' => 'drush_beanstalkd_item_stats',
-    'description' => 'Displays stats for a specified job in the queue',
-    'arguments' => array(
-      'item id' => 'Item id to display the stats for.',
-    ),
-    'options' => array(
-      'host' => 'Specify the host of the beanstalkd server',
-      'port' => 'Specify the port of the beanstalkd server',
-      'queue' => 'Specify the queue which the job exists.',
-    ),
-    'aliases' => array('item-stats'),
-  );
-  $items['beanstalkd-peek-ready'] = array(
-    'arguments' => array(
-      'queue' => 'Queue to inspect for ready items',
-    ),
-    'callback' => 'drush_beanstalkd_peek_ready',
-    'description' => 'Display the next job which is ready to be run.',
-    'options' => array(
-      'host' => 'Specify the host of the beanstalkd server',
-      'port' => 'Specify the port of the beanstalkd server',
-    ),
-    'aliases' => array('peek-ready'),
-  );
-  $items['beanstalkd-peek-buried'] = array(
-    'arguments' => array(
-      'queue' => 'Queue to inspect for buried items',
-    ),
-    'callback' => 'drush_beanstalkd_peek_buried',
-    'description' => 'Display the next job which has been buried.',
-    'options' => array(
-      'host' => 'Specify the host of the beanstalkd server',
-      'port' => 'Specify the port of the beanstalkd server',
-    ),
-    'aliases' => array('peek-buried'),
-  );
-  $items['beanstalkd-peek-delayed'] = array(
-    'arguments' => array(
-      'queue' => 'Queue to inspect for delayed items',
-    ),
-    'callback' => 'drush_beanstalkd_peek_delayed',
-    'description' => 'Display the next job which has been delayed.',
-    'options' => array(
-      'host' => 'Specify the host of the beanstalkd server',
-      'port' => 'Specify the port of the beanstalkd server',
-    ),
-    'aliases' => array('peek-delayed'),
-  );
-  $items['beanstalkd-kick'] = array(
-    'arguments' => array(
-      '' => 'number of items to kick to allow them to be reprocessed.',
-    ),
-    'callback' => 'drush_beanstalkd_kick',
-    'description' => 'Kick n items so that they will be reprocessed',
-    'options' => array(
-      'host' => 'Specify the host of the beanstalkd server',
-      'port' => 'Specify the port of the beanstalkd server',
-      'queue' => 'Specify the queue to kick the items on.',
-    ),
-    'aliases' => array('kick'),
-  );
+  $file = preg_replace('/(inc|php)$/', 'yml', __FILE__);
+  $config = Yaml::parse(file_get_contents($file));
+  $items = $config['commands'];
   return $items;
 }
 
@@ -243,7 +45,10 @@ function drush_beanstalkd_drupal_queues() {
  *   The name of the Beanstalkd queue for which to get Beanstalkd information.
  */
 function drush_beanstalkd_queue_stats($name = NULL) {
-  $queue_servers = _beanstalkd_get_queues($name);
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+
+  $queue_servers = $runner->getQueues($name);
 
   $result = [];
   /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
@@ -268,13 +73,19 @@ function drush_beanstalkd_run_server($alias = NULL) {
   /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
   $factory = \Drupal::service('beanstalkd.server.factory');
 
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+
   $server = $factory->get($alias);
-  $tubes = _beanstalkd_get_server_tube_names($server);
+  $tubes = $runner->getServerTubeNames($server);
   if (empty($tubes)) {
     drush_set_error('DRUSH_NO_TUBE', dt('This server contains no queue on which to wait.'));
   }
 
   $server->addWatches($tubes);
+
+  /* @var \Psr\Log\LoggerInterface $logger */
+  $logger = \Drupal::logger('beanstalkd');
 
   /* @var \Drupal\Core\Queue\QueueWorkerManagerInterface $manager */
   $manager = \Drupal::service('plugin.manager.queue_worker');
@@ -297,11 +108,12 @@ function drush_beanstalkd_run_server($alias = NULL) {
     try {
       $stats = $server->statsJob(NULL, $job);
       $tube = $stats['tube'];
-      drush_log(dt('Processing item @id from queue "@tube" on server "@name".', [
+      $job_info = [
         '@name' => $alias,
         '@id' => $job->getId(),
         '@tube' => $tube,
-      ]), 'info');
+      ];
+      $logger->info('Processing item @name/@tube/@id.', $job_info);
 
       try {
         $worker = $manager->createInstance($tube);
@@ -309,8 +121,7 @@ function drush_beanstalkd_run_server($alias = NULL) {
       }
       catch (PluginNotFoundException $e) {
         // This is a known exception pointing to a settings error.
-        \Drupal::logger('beanstalkd')->error($e->getMessage());
-        drush_set_error('DRUSH_PLUGIN_NOT_FOUND_EXCEPTION', $e->getMessage());
+        $logger->error($e->getMessage());
         $worker = NULL;
       }
 
@@ -332,18 +143,21 @@ function drush_beanstalkd_run_server($alias = NULL) {
   }
 
   $elapsed = microtime(TRUE) - $start;
-  drush_log(dt('Processed @count items from the @name server in @elapsed sec.', [
+  $level = drush_get_error() ? 'warning' : 'ok';
+  $logger->log($level, 'Processed @count items from the @name server in @elapsed sec.', [
     '@count' => $count,
     '@name' => $alias,
     '@elapsed' => round($elapsed, 2),
-  ]), drush_get_error() ? 'warning' : 'ok');
+  ]);
 }
 
 /**
  * Drush callback for 'beanstalkd-servers'.
  */
 function drush_beanstalkd_servers() {
-  $servers = _beanstalkd_get_servers(NULL, FALSE);
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+  $servers = $runner->getServers(NULL, FALSE);
   drush_print(Yaml::dump($servers));
 }
 
@@ -354,7 +168,9 @@ function drush_beanstalkd_servers() {
  *   A server alias.
  */
 function drush_beanstalkd_server_queues($alias = NULL) {
-  $servers = _beanstalkd_get_servers($alias, TRUE);
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+  $servers = $runner->getServers($alias, TRUE);
 
   $names = [];
   foreach ($servers as $alias => $info) {
@@ -373,7 +189,9 @@ function drush_beanstalkd_server_queues($alias = NULL) {
  *   The Beanstalkd host alias.
  */
 function drush_beanstalkd_server_stats($alias = NULL) {
-  $servers = _beanstalkd_get_servers($alias, TRUE);
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+  $servers = $runner->getServers($alias, TRUE);
 
   $result = [];
   foreach ($servers as $name => $info) {

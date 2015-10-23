@@ -112,10 +112,13 @@ class BeanstalkdServer {
    * This mechanism is not a standard Queue API feature, and needs an up-to-date
    * watch list. Do not mix with claimJob(), which resets the watch list.
    *
+   * The result retyping is here because Pheanstalk phpdoc lacks precision.
+   *
    * @return false|\Pheanstalk\Job
    *   A job submitted to the queue, or FALSE if an error occurred.
    */
   public function claimJobFromAnyTube() {
+    /* @var false|\Pheanstalk\Job $job */
     $job = $this->driver->reserve(static::DEFAULT_CLAIM_TIMEOUT);
     return $job;
   }
