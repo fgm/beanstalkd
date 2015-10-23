@@ -147,7 +147,7 @@ class Runner {
     $all_queues = $this->getQueues();
     $queues = array_filter($all_queues, function ($server) use($requested_server) {
       return $server === $requested_server;
-    }, ARRAY_FILTER_USE_BOTH);
+    });
     $result = array_keys($queues);
     return $result;
   }

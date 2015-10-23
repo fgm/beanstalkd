@@ -16,8 +16,8 @@ web applications by running time-consuming tasks asynchronously.
 Requirements
 ------------
 
-  * beanstalkd needs to be installed and configured.
-  * Drupal 8.0.0-RC1 or more recent must be configured with Pheanstalk 3.x:  
+  * A beanstalkd server needs to be installed and configured.
+  * Drupal 8.0.0-RC2 or more recent must be configured with Pheanstalk 3.x:  
     - edit `(yoursite)/composer.json` (not `(yoursite)/core/composer.json`)
     - insert: `"pda/pheanstalk": "^3.1"` in the `require` section and save.
     - update your vendors by typing `composer update` at the site root.
@@ -27,7 +27,7 @@ Installation
 ------------
 
   1. Install like a normal Drupal module. Do _not_ run `composer install` in the module directory: although there is a `composer.json` file in the project, it is only here to inform Scrutinizer CI about dependencies.
-  2. In your `settings.php`, set the `$settings` variables to the correct settings:
+  2. Once your site is installed, edit your `settings.php`, setting the `$settings` variables appropriately:
       * If you want to set beanstalkd as the default queue manager then add the following to your settings.
 
           $settings['queue_default'] = 'queue.beanstalkd';
@@ -36,6 +36,14 @@ Installation
 
           $settings['queue_service_{queue_name}'] = 'queue.beanstalkd';
           $settings['queue_reliable_service_{queue_name}'] = 'queue.beanstalkd';
+
+
+_Notice_: With the current version of the module, you may add the module to your 
+installation profile to have it enabled automatically, but not set the default
+queue to be handled by Beanstalkd during installation : at this point, the 
+module is not yet installed, so the `queue.beanstalkd` service is not defined,
+but the Drupal 8 installer needs a queue to handle its batch operations. Replace
+the default queue only once installation is complete.
 
 ____
 

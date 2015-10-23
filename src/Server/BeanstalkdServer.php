@@ -19,11 +19,6 @@ use Pheanstalk\PheanstalkInterface;
  * Class BeanstalkdServer wraps a Pheanstalk facade and Drupal queue names.
  */
 class BeanstalkdServer {
-  const JOB_STATES = [
-    PeekCommand::TYPE_READY,
-    PeekCommand::TYPE_DELAYED,
-    PeekCommand::TYPE_BURIED,
-  ];
 
   /**
    * The default timeout for claimJob().
@@ -32,6 +27,11 @@ class BeanstalkdServer {
    */
   const DEFAULT_CLAIM_TIMEOUT = 3600;
 
+  /**
+   * The prefix used to build count commands for various item states.
+   *
+   * @see \Drupal\beanstalkd\Server\BeanstalkdServer::getTubeItemCount()
+   */
   const TUBE_STATS_CURRENT_PREFIX = 'current-jobs-';
 
   /**
@@ -47,6 +47,27 @@ class BeanstalkdServer {
    * @var array
    */
   protected $tubeNames;
+
+  /**
+   * List job states.
+   *
+   * This is a static function because array constants are not supported in
+   * PHP5.5, and in 2015 some sites need the module to work on 5.5.
+   *
+   * @XXX Revisit at some point after Drupal 8.1.0.
+   *
+   * @return array
+   *   An array of job states.
+   */
+  public static function jobStates() {
+    $result = [
+      PeekCommand::TYPE_READY,
+      PeekCommand::TYPE_DELAYED,
+      PeekCommand::TYPE_BURIED,
+    ];
+
+    return $result;
+  }
 
   /**
    * Constructor.
@@ -310,7 +331,7 @@ class BeanstalkdServer {
 
     do {
       $has_done_work = FALSE;
-      foreach (static::JOB_STATES as $job_state) {
+      foreach (static::jobStates() as $job_state) {
         if ($this->flush($name, $job_state, $max_jobs_per_pass)) {
           $has_done_work = TRUE;
         }
@@ -347,12 +368,12 @@ class BeanstalkdServer {
     }
     catch (ServerException $e) {
       $stats = [];
-      foreach (static::JOB_STATES as $state) {
+      foreach (static::jobStates() as $state) {
         $stats[static::TUBE_STATS_CURRENT_PREFIX . $state] = 0;
       }
     }
 
-    foreach (static::JOB_STATES as $state) {
+    foreach (static::jobStates() as $state) {
       $state_name = strtolower($state);
       $key = static::TUBE_STATS_CURRENT_PREFIX . $state_name;
       $count += $stats[$key];

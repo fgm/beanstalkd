@@ -7,6 +7,7 @@
 
 use Drupal\Component\Utility\Unicode;
 use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Pheanstalk\PheanstalkInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -113,7 +114,9 @@ function drush_beanstalkd_server_stats($alias = NULL) {
 
   $result = [];
   foreach ($servers as $name => $info) {
-    $stats = $info['server']->stats('global');
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+    $server = $info['server'];
+    $stats = $server->stats('global');
     $result[$name] = ($stats instanceof \ArrayObject)
       ? $stats->getArrayCopy()
       : [];
@@ -143,7 +146,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
+    $port = drush_get_option('port', PheanstalkInterface::DEFAULT_PORT);
   }
 
   $hostname = $host . ':' . $port;
@@ -232,13 +235,13 @@ function drush_beanstalkd_peek_items($type, $name) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
+    $port = drush_get_option('port', PheanstalkInterface::DEFAULT_PORT);
   }
 
   $hostname = $host . ':' . $port;
 
   if (isset($queues[$hostname])) {
-    $queue = new QueueBeanstalkd(NULL);
+    $queue = new BeanstalkdQueue(NULL);
     $queue->createConnection($host, $port);
 
     $queues = beanstalkd_get_queues($hostname);
@@ -355,7 +358,7 @@ function drush_beanstalkd_kick($items = NULL) {
   }
   else {
     $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', \Pheanstalk_PheanstalkInterface::DEFAULT_PORT);
+    $port = drush_get_option('port', PheanstalkInterface::DEFAULT_PORT);
   }
 
   $hostname = $host . ':' . $port;
@@ -363,7 +366,7 @@ function drush_beanstalkd_kick($items = NULL) {
   $name = drush_get_option('queue', NULL);
 
   if (isset($queues[$hostname])) {
-    $queue = new QueueBeanstalkd(NULL);
+    $queue = new BeanstalkdQueue(NULL);
     $queue->createConnection($host, $port);
 
     $queues = beanstalkd_get_queues($hostname);

@@ -18,25 +18,8 @@ use Pheanstalk\PheanstalkInterface;
 class BeanstalkdServerFactory {
   const DEFAULT_SERVER_ALIAS = 'default';
 
-  const DEFAULT_SERVER_PARAMETERS = [
-    'host' => 'localhost',
-    'port' => PheanstalkInterface::DEFAULT_PORT,
-    'connect_timeout' => Connection::DEFAULT_CONNECT_TIMEOUT,
-    'persistent' => FALSE,
-  ];
-
-  const DEFAULT_SERVERS = [
-    self::DEFAULT_SERVER_ALIAS => self::DEFAULT_SERVER_PARAMETERS,
-  ];
-
   // As luck has it.
   const DEFAULT_QUEUE_NAME = PheanstalkInterface::DEFAULT_TUBE;
-
-  const DEFAULT_QUEUE_MAPPINGS = [
-    self::DEFAULT_QUEUE_NAME => self::DEFAULT_SERVER_ALIAS,
-  ];
-
-  const DEFAULT_SETTINGS = self::DEFAULT_SERVERS + self::DEFAULT_QUEUE_MAPPINGS;
 
   /**
    * The definitions of all configured servers in Settings.
@@ -60,13 +43,74 @@ class BeanstalkdServerFactory {
   protected $mappings = [];
 
   /**
+   * Constant: default [queue -> server alias] mappings.
+   *
+   * This is a static function because array constants are not supported in
+   * PHP5.5, and in 2015 some sites need the module to work on 5.5.
+   *
+   * @XXX Revisit at some point after Drupal 8.1.0.
+   */
+  public static function defaultQueueMappings() {
+    $result = [
+      self::DEFAULT_QUEUE_NAME => self::DEFAULT_SERVER_ALIAS,
+    ];
+    return $result;
+  }
+
+  /**
+   * Constant: default server parameters.
+   *
+   * This is a static function because array constants are not supported in
+   * PHP5.5, and in 2015 some sites need the module to work on 5.5.
+   *
+   * @XXX Revisit at some point after Drupal 8.1.0.
+   */
+  public static function defaultServerParameters() {
+    $result = [
+      'host' => 'localhost',
+      'port' => PheanstalkInterface::DEFAULT_PORT,
+      'connect_timeout' => Connection::DEFAULT_CONNECT_TIMEOUT,
+      'persistent' => FALSE,
+    ];
+    return $result;
+  }
+
+  /**
+   * Constant: default server alias list.
+   *
+   * This is a static function because array constants are not supported in
+   * PHP5.5, and in 2015 some sites need the module to work on 5.5.
+   *
+   * @XXX Revisit at some point after Drupal 8.1.0.
+   */
+  public static function defaultServers() {
+    $result = [
+      self::DEFAULT_SERVER_ALIAS => self::defaultServerParameters(),
+    ];
+    return $result;
+  }
+
+  /**
+   * Constant: default module settings.
+   *
+   * This is a static function because array constants are not supported in
+   * PHP5.5, and in 2015 some sites need the module to work on 5.5.
+   *
+   * @XXX Revisit at some point after Drupal 8.1.0.
+   */
+  public static function defaultSettings() {
+    $result = self::defaultServers() + self::defaultQueueMappings();
+    return $result;
+  }
+
+  /**
    * Constructor: provides sane defaults from settings.
    *
    * @param \Drupal\Core\Site\Settings $settings
    *   The core Settings service.
    */
   public function __construct(Settings $settings) {
-    $module_settings = $settings->get('beanstalkd', static::DEFAULT_SETTINGS);
+    $module_settings = $settings->get('beanstalkd', static::defaultSettings());
 
     $servers = isset($module_settings['servers']) ? $module_settings['servers'] : [];
     $this->initServers($servers);
@@ -114,9 +158,9 @@ class BeanstalkdServerFactory {
    */
   protected function initServers(array $servers) {
     foreach ($servers as &$server_parameters) {
-      $server_parameters += static::DEFAULT_SERVER_PARAMETERS;
+      $server_parameters += static::defaultServerParameters();
     }
-    $servers = array_replace_recursive(static::DEFAULT_SERVERS, $servers);
+    $servers = array_replace_recursive(static::defaultServers(), $servers);
     $this->servers = $servers;
   }
 
@@ -127,7 +171,7 @@ class BeanstalkdServerFactory {
    *   A queue name to server alias hash.
    */
   protected function initMappings(array $mappings) {
-    $mappings += static::DEFAULT_QUEUE_MAPPINGS;
+    $mappings += static::defaultQueueMappings();
     $this->mappings = $mappings;
   }
 

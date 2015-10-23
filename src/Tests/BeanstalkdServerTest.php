@@ -7,7 +7,6 @@
 
 namespace Drupal\beanstalkd\Tests;
 
-use Drupal\Component\Utility\NestedArray;
 use Pheanstalk\Job;
 
 /**

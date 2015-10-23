@@ -33,10 +33,17 @@ class SampleWorker extends QueueWorkerBase implements ContainerFactoryPluginInte
   /**
    * Constructor.
    *
+   * @param array $configuration
+   *   The plugin configuration.
+   * @param string $plugin_id
+   *   The plugin id.
+   * @param mixed $plugin_definition
+   *   The plugin definition.
    * @param \Psr\Log\LoggerInterface $logger
    *   The Beanstalkd logger service.
    */
-  public function __construct(LoggerInterface $logger) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, LoggerInterface $logger) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->logger = $logger;
   }
 
@@ -44,8 +51,9 @@ class SampleWorker extends QueueWorkerBase implements ContainerFactoryPluginInte
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    /** @var \Psr\Log\LoggerInterface $logger */
     $logger = $container->get('logger.channel.beanstalkd');
-    return new static($logger);
+    return new static($configuration, $plugin_id, $plugin_definition, $logger);
   }
 
   /**

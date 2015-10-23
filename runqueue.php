@@ -5,7 +5,9 @@
  * CLI tool for working with queues.
  */
 
+use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Drupal\Core\Site\Settings;
+use Pheanstalk\PheanstalkInterface;
 
 /**
  * Drupal shell execution script.
@@ -18,11 +20,11 @@ $start_memory = memory_get_usage();
 /*
 -c | --host is now taken from settings for host aliases.
 -p | --port is now taken from settings for host aliases.
--l|--list is now drush btdq for drupal queues, drush btsq for server queues.
+-l | --list is now drush btdq for drupal queues, drush btsq for server queues.
  */
 
 $hostname = Settings::get('beanstalkd_host', 'localhost')
-  . ':' . Settings::get('beanstalkd_port', \Pheanstalk_Pheanstalk::DEFAULT_PORT);
+  . ':' . Settings::get('beanstalkd_port', PheanstalkInterface::DEFAULT_PORT);
 $names = beanstalkd_get_queues($hostname);
 
 
@@ -47,7 +49,8 @@ foreach ($names as $name) {
   $factory->get($name)->createQueue();
 }
 
-$queue = new QueueBeanstalkd(NULL);
+$logger = \Drupal::logger('beanstalkd');
+$queue = new BeanstalkdQueue(NULL);
 
 if (empty($names)) {
   echo "Exiting: No queues available.\n";
@@ -55,7 +58,7 @@ if (empty($names)) {
 }
 
 if (isset($args['x'])) {
-  beanstalkd_log('Collecting job ' . $args['x']);
+  $logger->debug('Collecting job ' . $args['x']);
   $item = reset($queue->peek($args['x']));
   if ($item) {
     if (beanstalkd_process_item($item)) {
@@ -64,10 +67,12 @@ if (isset($args['x'])) {
         $queue->watch($item->name);
         $queue->ignore('default');
 
-        beanstalkd_log(t('Processing additional items while forked on queue: @name', array('@name' => $item->name)));
+        $logger->debug('Processing additional items while forked on queue: @name', [
+          '@name' => $item->name,
+        ]);
         beanstalkd_process(FALSE, $options['forked_extra_timeout'], $options['forked_extra_items']);
       }
-      beanstalkd_log('Item processing complete.');
+      $logger->debug('Item processing complete.');
       register_shutdown_function('beanstalkd_shutdown');
       exit(0);
     }
@@ -76,9 +81,11 @@ if (isset($args['x'])) {
 }
 
 $queue->watch($names);
-beanstalkd_log(t("Watching the following queues: @queues", array('@queues' => implode(", ", $names))));
+$logger->info('Watching the following queues: @queues', [
+  '@queues' => implode(', ', $names),
+]);
 $queue->ignore('default');
-beanstalkd_log(t("Ignoring default queue"));
+$logger->info('Ignoring default queue');
 
 beanstalkd_process();
 
