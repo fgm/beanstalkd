@@ -5,11 +5,11 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Component\Utility\Unicode;
-use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Drupal\Core\Queue\SuspendQueueException;
+use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -67,88 +67,9 @@ function drush_beanstalkd_queue_stats($name = NULL) {
  *   The alias for the server from which to fetch jobs.
  */
 function drush_beanstalkd_run_server($alias = NULL) {
-  if (!isset($alias)) {
-    $alias = BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS;
-  }
-  /* @var \Drupal\beanstalkd\Server\BeanstalkdServerFactory $factory */
-  $factory = \Drupal::service('beanstalkd.server.factory');
-
   /* @var \Drupal\beanstalkd\Runner $runner */
   $runner = \Drupal::service('beanstalkd.runner');
-
-  $server = $factory->get($alias);
-  $tubes = $runner->getServerTubeNames($server);
-  if (empty($tubes)) {
-    drush_set_error('DRUSH_NO_TUBE', dt('This server contains no queue on which to wait.'));
-  }
-
-  $server->addWatches($tubes);
-
-  /* @var \Psr\Log\LoggerInterface $logger */
-  $logger = \Drupal::logger('beanstalkd');
-
-  /* @var \Drupal\Core\Queue\QueueWorkerManagerInterface $manager */
-  $manager = \Drupal::service('plugin.manager.queue_worker');
-
-  $time_limit = intval(drush_get_option('time-limit'));
-  $verbose = !!drush_get_option('verbose');
-  if ($verbose) {
-    $names = implode(', ', $tubes);
-    drush_print(dt('Handling tubes: @tubes', ['@tubes' => $names]));
-  }
-
-  $start = time();
-  $end = time() + $time_limit;
-  $count = 0;
-
-  // Provide a default tube for exception recovery.
-  $tube = reset($tubes);
-
-  while ((!$time_limit || time() < $end) && ($job = $server->claimJobFromAnyTube())) {
-    try {
-      $stats = $server->statsJob(NULL, $job);
-      $tube = $stats['tube'];
-      $job_info = [
-        '@name' => $alias,
-        '@id' => $job->getId(),
-        '@tube' => $tube,
-      ];
-      $logger->info('Processing item @name/@tube/@id.', $job_info);
-
-      try {
-        $worker = $manager->createInstance($tube);
-        $worker->processItem($job->getData());
-      }
-      catch (PluginNotFoundException $e) {
-        // This is a known exception pointing to a settings error.
-        $logger->error($e->getMessage());
-        $worker = NULL;
-      }
-
-      // If there is no worker for this job, there is no point in keeping it.
-      $server->deleteJob($tube, $job->getId());
-      $count++;
-    }
-    catch (SuspendQueueException $e) {
-      // If the worker indicates there is a problem with the whole queue,
-      // release the item and skip to the next queue.
-      $server->releaseJob($tube, $job);
-      drush_set_error('DRUSH_SUSPEND_QUEUE_EXCEPTION', $e->getMessage());
-    }
-    catch (\Exception $e) {
-      // In case of any other kind of exception, log it and leave the item
-      // in the queue to be processed again later.
-      drush_set_error('DRUSH_QUEUE_EXCEPTION', $e->getMessage());
-    }
-  }
-
-  $elapsed = microtime(TRUE) - $start;
-  $level = drush_get_error() ? 'warning' : 'ok';
-  $logger->log($level, 'Processed @count items from the @name server in @elapsed sec.', [
-    '@count' => $count,
-    '@name' => $alias,
-    '@elapsed' => round($elapsed, 2),
-  ]);
+  $runner->runServer($alias);
 }
 
 /**

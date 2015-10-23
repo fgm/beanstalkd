@@ -10,6 +10,8 @@ commands:
     arguments:
       server: 'The name of the server. Defaults to the default server.'
     description: 'Run work from any queue on a single server'
+    options:
+      time-limit: 'The time during which to run work. Defaults to 0 meaning infinite.'
 
   beanstalkd-servers:
     aliases: ['btsv']

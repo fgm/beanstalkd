@@ -114,12 +114,15 @@ class BeanstalkdServer {
    *
    * The result retyping is here because Pheanstalk phpdoc lacks precision.
    *
+   * @param int|null $timeout
+   *   The number of seconds to wait for a job to come in.
+   *
    * @return false|\Pheanstalk\Job
    *   A job submitted to the queue, or FALSE if an error occurred.
    */
-  public function claimJobFromAnyTube() {
+  public function claimJobFromAnyTube($timeout = NULL) {
     /* @var false|\Pheanstalk\Job $job */
-    $job = $this->driver->reserve(static::DEFAULT_CLAIM_TIMEOUT);
+    $job = $this->driver->reserve($timeout);
     return $job;
   }
 

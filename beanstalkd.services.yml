@@ -19,4 +19,4 @@ services:
 
   beanstalkd.runner:
     class: Drupal\beanstalkd\Runner
-    arguments: ['@beanstalkd.server.factory', 'beanstalkd.worker_manager', 'logger.channel.beanstalkd']
+    arguments: ['@plugin.manager.queue_worker', '@beanstalkd.server.factory', '@beanstalkd.worker_manager', '@logger.channel.beanstalkd']

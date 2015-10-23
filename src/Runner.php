@@ -8,12 +8,23 @@ namespace Drupal\beanstalkd;
 
 use Drupal\beanstalkd\Server\BeanstalkdServer;
 use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
+use Drupal\Component\Plugin\Exception\PluginNotFoundException;
+use Drupal\Core\Queue\QueueWorkerManagerInterface;
+use Drupal\Core\Queue\SuspendQueueException;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 
 /**
  * Class Runner contains code needed for CLI (Drush) operations.
  */
 class Runner {
+
+  /**
+   * The core queue worker manager service.
+   *
+   * @var \Drupal\Core\Queue\QueueWorkerManagerInterface
+   */
+  protected $coreManager;
 
   /**
    * The Beanstalkd logger channel service.
@@ -39,6 +50,8 @@ class Runner {
   /**
    * Service constructor.
    *
+   * @param \Drupal\Core\Queue\QueueWorkerManagerInterface $core_manager
+   *   The core queue worker manager service.
    * @param \Drupal\beanstalkd\Server\BeanstalkdServerFactory $server_factory
    *   The Beanstalkd server factory service.
    * @param \Drupal\beanstalkd\WorkerManager $manager
@@ -46,7 +59,9 @@ class Runner {
    * @param \Psr\Log\LoggerInterface $logger
    *   The Beanstalkd logger channel service.
    */
-  public function __construct(BeanstalkdServerFactory $server_factory, WorkerManager $manager, LoggerInterface $logger) {
+  public function __construct(QueueWorkerManagerInterface $core_manager, BeanstalkdServerFactory $server_factory,
+    WorkerManager $manager, LoggerInterface $logger) {
+    $this->coreManager = $core_manager;
     $this->logger = $logger;
     $this->serverFactory = $server_factory;
     $this->workerManager = $manager;
@@ -135,6 +150,125 @@ class Runner {
     }, ARRAY_FILTER_USE_BOTH);
     $result = array_keys($queues);
     return $result;
+  }
+
+  /**
+   * Validation helper for runServer().
+   *
+   * @param null|string $alias
+   *   The alias for the server from which to fetch jobs.
+   *
+   * @return array
+   *   - the alias
+   *   - the server instance
+   *   - the tubes array
+   */
+  public function runServerPreValidate($alias = NULL) {
+    if (!isset($alias)) {
+      $alias = BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS;
+    }
+
+    $server = $this->serverFactory->get($alias);
+
+    $tubes = $this->getServerTubeNames($server);
+    if (empty($tubes)) {
+      drush_set_error('DRUSH_NO_TUBE', dt('This server contains no queue on which to wait.'));
+    }
+
+    return [$alias, $server, $tubes];
+  }
+
+  /**
+   * Drush callback for 'beanstalkd-run-server'.
+   *
+   * @param null|string $alias
+   *   The alias for the server from which to fetch jobs.
+   */
+  public function runServer($alias = NULL) {
+    /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+    list($alias, $server, $tubes) = $this->runServerPreValidate($alias);
+
+    $time_limit = intval(drush_get_option('time-limit'), NULL);
+    $verbose = !!drush_get_option('verbose');
+    if ($verbose) {
+      $names = implode(', ', $tubes);
+      drush_print(dt('Handling tubes: @tubes', ['@tubes' => $names]));
+    }
+
+    $start = time();
+    $end = $time_limit ? time() + $time_limit : PHP_INT_MAX;
+
+    $server->addWatches($tubes);
+    $count = $this->runServerMainLoop($alias, $end, $server, $tubes);
+
+    $elapsed = microtime(TRUE) - $start;
+    $level = drush_get_error() ? LogLevel::WARNING : LogLevel::INFO;
+    $this->logger->log($level, 'Processed @count items from the @name server in @elapsed sec.', [
+      '@count' => $count,
+      '@name' => $alias,
+      '@elapsed' => round($elapsed, 2),
+    ]);
+  }
+
+  /**
+   * Main loop of runServer() method.
+   *
+   * @param string $alias
+   *   The alias for the server on which to service jobs.
+   * @param int $end
+   *   The timestamp until which to service jobs.
+   * @param \Drupal\beanstalkd\Server\BeanstalkdServer $server
+   *   The Beanstalkd server instance.
+   * @param array $tubes
+   *   The name of tubes to service.
+   *
+   * @return int The number of serviced jobs.
+   *   The number of serviced jobs.
+   */
+  protected function runServerMainLoop($alias, $end, BeanstalkdServer $server, array $tubes) {
+    // Provide a default tube for exception recovery.
+    $tube = reset($tubes);
+
+    $count = 0;
+    while ((($remaining = $end - time()) > 0) && ($job = $server->claimJobFromAnyTube($remaining))) {
+      try {
+        $stats = $server->statsJob(NULL, $job);
+        $tube = $stats['tube'];
+        $job_info = [
+          '@name' => $alias,
+          '@id' => $job->getId(),
+          '@tube' => $tube,
+        ];
+        $this->logger->info('Processing item @name/@tube/@id.', $job_info);
+
+        try {
+          $worker = $this->coreManager->createInstance($tube);
+          $worker->processItem($job->getData());
+        }
+        catch (PluginNotFoundException $e) {
+          // This is a known exception pointing to a settings error.
+          $this->logger->error($e->getMessage());
+          $worker = NULL;
+        }
+
+        // If there is no worker for this job, there is no point in keeping it.
+        $server->deleteJob($tube, $job->getId());
+        $count++;
+      }
+      catch (SuspendQueueException $e) {
+        // If the worker indicates there is a problem with the whole queue,
+        // release the item and skip to the next queue.
+        $server->releaseJob($tube, $job);
+        drush_set_error('DRUSH_SUSPEND_QUEUE_EXCEPTION', $e->getMessage());
+      }
+      catch (\Exception $e) {
+        // In case of any other kind of exception, log it and leave the item
+        // in the queue to be processed again later.
+        drush_set_error('DRUSH_QUEUE_EXCEPTION', $e->getMessage());
+      }
+    }
+
+    return $count;
   }
 
 }
