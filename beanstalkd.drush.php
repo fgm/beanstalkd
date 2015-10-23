@@ -5,12 +5,12 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Doctrine\Common\Util\Debug;
 use Drupal\beanstalkd\Server\BeanstalkdServer;
 use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Component\Utility\Unicode;
 use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Drupal\Core\Queue\SuspendQueueException;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -91,12 +91,12 @@ function _beanstalkd_get_servers($alias = NULL, $include_objects = FALSE) {
  * @param \Drupal\beanstalkd\Server\BeanstalkdServer $requested_server
  *   The server.
  *
- * @return array
+ * @return array<integer|string>
  *   An array of queue names for this server.
  */
 function _beanstalkd_get_server_tube_names(BeanstalkdServer $requested_server) {
   $all_queues = _beanstalkd_get_queues();
-  $queues = array_filter($all_queues, function ($server, $name) use($requested_server) {
+  $queues = array_filter($all_queues, function ($server) use($requested_server) {
     return $server === $requested_server;
   }, ARRAY_FILTER_USE_BOTH);
   $result = array_keys($queues);
@@ -270,6 +270,9 @@ function drush_beanstalkd_run_server($alias = NULL) {
 
   $server = $factory->get($alias);
   $tubes = _beanstalkd_get_server_tube_names($server);
+  if (empty($tubes)) {
+    drush_set_error('DRUSH_NO_TUBE', dt('This server contains no queue on which to wait.'));
+  }
 
   $server->addWatches($tubes);
 
@@ -280,12 +283,15 @@ function drush_beanstalkd_run_server($alias = NULL) {
   $verbose = !!drush_get_option('verbose');
   if ($verbose) {
     $names = implode(', ', $tubes);
-    drush_print(dt("Handling tubes: @tubes", ['@tubes' => $names]));
+    drush_print(dt('Handling tubes: @tubes', ['@tubes' => $names]));
   }
 
   $start = time();
   $end = time() + $time_limit;
   $count = 0;
+
+  // Provide a default tube for exception recovery.
+  $tube = reset($tubes);
 
   while ((!$time_limit || time() < $end) && ($job = $server->claimJobFromAnyTube())) {
     try {
@@ -302,6 +308,8 @@ function drush_beanstalkd_run_server($alias = NULL) {
         $worker->processItem($job->getData());
       }
       catch (PluginNotFoundException $e) {
+        // This is a known exception pointing to a settings error.
+        \Drupal::logger('beanstalkd')->error($e->getMessage());
         drush_set_error('DRUSH_PLUGIN_NOT_FOUND_EXCEPTION', $e->getMessage());
         $worker = NULL;
       }
@@ -313,7 +321,7 @@ function drush_beanstalkd_run_server($alias = NULL) {
     catch (SuspendQueueException $e) {
       // If the worker indicates there is a problem with the whole queue,
       // release the item and skip to the next queue.
-      $server->releaseJob($job);
+      $server->releaseJob($tube, $job);
       drush_set_error('DRUSH_SUSPEND_QUEUE_EXCEPTION', $e->getMessage());
     }
     catch (\Exception $e) {
@@ -386,7 +394,7 @@ function drush_beanstalkd_server_stats($alias = NULL) {
  *   The item for which to get Beanstalkd information.
  *
  * @throws \Exception
- *   When connection cannot be established. Maybe other cases too ?
+ *   When connection cannot be established. Maybe other cases too.
  */
 function drush_beanstalkd_item_stats($item_id = NULL) {
   beanstalkd_load_pheanstalk();
@@ -438,7 +446,7 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
 /**
  * Drush callback for beanstalkd-peek-ready.
  *
- * @param string $name
+ * @param null|string $name
  *   The name of the queues on which to peek for ready items.
  */
 function drush_beanstalkd_peek_ready($name = NULL) {
@@ -448,7 +456,7 @@ function drush_beanstalkd_peek_ready($name = NULL) {
 /**
  * Drush callback for beanstalkd-peek-ready.
  *
- * @param string $name
+ * @param null|string $name
  *   The name of the queues on which to peek for buried items.
  */
 function drush_beanstalkd_peek_buried($name = NULL) {
@@ -458,7 +466,7 @@ function drush_beanstalkd_peek_buried($name = NULL) {
 /**
  * Drush callback for beanstalkd-peek-ready.
  *
- * @param string $name
+ * @param null|string $name
  *   The name of the queues on which to peek for buried items.
  */
 function drush_beanstalkd_peek_delayed($name = NULL) {
@@ -474,13 +482,14 @@ function drush_beanstalkd_peek_delayed($name = NULL) {
  *   The name of the queue in which to peek.
  *
  * @throws \Exception
- *   When connection cannot be established. Maybe other cases too ?
+ *   When connection cannot be established. Maybe other cases too.
  */
 function drush_beanstalkd_peek_items($type, $name) {
   beanstalkd_load_pheanstalk();
   $queues = beanstalkd_get_host_queues();
 
-  if ($name = drush_get_option('queue', NULL)) {
+  if ($name_option = drush_get_option('queue', NULL)) {
+    $name = $name_option;
     $info = beanstalkd_get_host_queues(NULL, $name);
     $host = $info['options']['host'];
     $port = $info['options']['port'];
@@ -584,11 +593,11 @@ function _drush_beanstalkd_filter_type($name, $type_filter = NULL, $init = FALSE
 /**
  * Drush callback for beanstalkd-kick.
  *
- * @param array|int $items
- *   An array of item ids to kick, or a single item id.
+ * @param int|null|string[] $items
+ *   An array of item ids to kick, or a single item id, or NULL for all items.
  *
  * @throws \Exception
- *   When connection cannot be established. Maybe other cases too ?
+ *   When connection cannot be established. Maybe other cases too.
  */
 function drush_beanstalkd_kick($items = NULL) {
   if (!is_numeric($items)) {

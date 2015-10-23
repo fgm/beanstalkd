@@ -13,7 +13,7 @@ use Pheanstalk\Pheanstalk;
  * @param array $requirements
  *   A hook_requirements() requirements array.
  *
- * @return array <string,array>
+ * @return array<string,array>
  *   As per hook_requirements().
  */
 function _beanstalkd_requirements_library(array $requirements) {

@@ -36,7 +36,7 @@ class SampleWorker extends QueueWorkerBase implements ContainerFactoryPluginInte
    * @param \Psr\Log\LoggerInterface $logger
    *   The Beanstalkd logger service.
    */
-  public function __construct(LoggerInterface $logger = NULL) {
+  public function __construct(LoggerInterface $logger) {
     $this->logger = $logger;
   }
 

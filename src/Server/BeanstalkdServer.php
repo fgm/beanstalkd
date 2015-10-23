@@ -412,7 +412,7 @@ class BeanstalkdServer {
    * @param null|\Pheanstalk\Job $job
    *   The queried job, Only used for "job".
    *
-   * @return false|\Pheanstalk\Response\ArrayResponse
+   * @return false|\ArrayObject
    *   The statistics about the tube, or false if it could not be found.
    */
   public function stats($type, $name = BeanstalkdServerFactory::DEFAULT_QUEUE_NAME, Job $job = NULL) {
