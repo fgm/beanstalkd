@@ -3,7 +3,9 @@ Beanstalkd is a Drupal module to allow Drupal Queues to take advantage of
 beanstalkd to process the queues instead of the built-in Database queue system 
 that ships with Drupal.
 
+[![Build Status](https://travis-ci.org/FGM/beanstalkd.svg?branch=wip)](https://travis-ci.org/FGM/beanstalkd)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/FGM/beanstalkd/badges/quality-score.png?b=8x-worker)](https://scrutinizer-ci.com/g/FGM/beanstalkd/?branch=8x-worker)
+[![Code Coverage](https://scrutinizer-ci.com/g/FGM/beanstalkd/badges/coverage.png?b=wip)](https://scrutinizer-ci.com/g/FGM/beanstalkd/?branch=wip)
 
 What is Beanstalkd
 ------------------

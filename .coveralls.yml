@@ -1,0 +1,4 @@
+src_dir: modules/contrib/beanstalkd
+coverage_clover: modules/contrib/beanstalkd/coverage.clover
+json_path: /tmp/coverage.json
+service_name: travis-ci

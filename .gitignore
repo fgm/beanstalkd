@@ -1,1 +1,8 @@
+# Scrutinizer external coverage parser
+ocular.phar
+
+# Composer-generated dependencies, which should not be there anyway.
 /vendor/
+
+# Generated coverage
+coverage.clover

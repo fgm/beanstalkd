@@ -1,0 +1,114 @@
+language: php
+
+sudo: true
+
+php:
+  - 5.5
+  - 5.6
+  - 7
+  - hhvm
+
+matrix:
+  allow_failures:
+    - php: hhvm
+  fast_finish: true
+
+branches:
+  only:
+    - wip
+
+env:
+  global:
+    - MODULE_NAME='beanstalkd'
+    - MODULE_DEPS=''
+    - MODULE_TEST_GROUP='Beanstalkd'
+    - DB_NAME='drupal'
+    - DB_URL="mysql://root@127.0.0.1/$DB_NAME"
+    - DRUPAL_REPO='git://drupalcode.org/project/drupal.git'
+    - DRUPAL_VERSION='8.0.x'
+    - PHPCS_VERSION='2.0.*@dev'
+    - CODER_VERSION='8.2.0-alpha2'
+    - COVERAGE_FILE=coverage.clover
+    - PHPUNIT_OPTS="-c core -v --coverage-clover=$COVERAGE_FILE"
+
+    # Code coverage via coveralls.io
+    - COVERALLS="satooshi/php-coveralls:0.6.*"
+
+before_install:
+  # Ensure we have the latest packages.
+  - sudo apt-get -y update
+
+  # Composer.
+  - sed -i '1i export PATH="$HOME/.composer/vendor/bin:$PATH"' $HOME/.bashrc
+  - source $HOME/.bashrc
+  - composer self-update
+
+  # Drush.
+  - composer global require -n "youngj/httpserver:dev-master#41dd2b7"
+  - composer global require -n drush/drush:dev-master
+
+  # Codesniffer.
+  - composer global require -n squizlabs/php_codesniffer:$PHPCS_VERSION
+
+  # Coder.
+  - composer global require -n drupal/coder:$CODER_VERSION
+  - ln -s ~/.composer/vendor/drupal/coder/coder_sniffer/Drupal ~/.composer/vendor/squizlabs/php_codesniffer/CodeSniffer/Standards/
+
+  # Ensure the PHP environment is ready.
+  - phpenv rehash
+
+install:
+  # Basic PHP packages.
+  - sudo apt-get install -y --force-yes php5-cgi php5-mysql
+
+  # The Beanstalkd module needs an active Beanstalkd server.
+  - sudo apt-get install beanstalkd
+  - sudo sed -i s/#START=yes/START=yes/ /etc/default/beanstalkd
+  - sudo service beanstalkd start
+
+  # Move the checked out module into the correct structure.
+  - mkdir /tmp/$MODULE_NAME
+  - mv * /tmp/$MODULE_NAME/
+  - git clone --branch $DRUPAL_VERSION $DRUPAL_REPO drupal --depth 1
+  - mkdir drupal/modules/contrib
+  - mv /tmp/$MODULE_NAME drupal/modules/contrib
+
+before_script:
+  # This is needed to allow the next command to run on HHVM.
+  - mkdir -p ~/.phpenv/versions/hhvm/etc/conf.d/
+  # This fixes a fail when installing Drupal.
+  - echo 'sendmail_path = /bin/true' >> ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/travis.ini
+
+  # Install Pheanstalk (for the module) and Coveralls (for coverage) as part of the root vendors.
+  - cd $TRAVIS_BUILD_DIR/drupal
+  - composer require "pda/pheanstalk:^3.1.0"
+  - composer require $COVERALLS
+  - composer update --prefer-source --with-dependencies pda/pheanstalk satooshi/php-coveralls
+
+  # Install Drupal and enable the required modules (including this one).
+  - mysql -e "create database $DB_NAME;"
+  - drush si -y --db-url="$DB_URL" testing
+  - if [ ! -z $MODULE_DEPS ]; then drush dl $MODULE_DEPS && drush en -y $MODULE_DEPS -y ; fi
+  - drush en $MODULE_NAME -y
+
+script:
+  # Don't run code sniffer: "discourages" sniffs are broken on PHP 5.6.
+  #- phpcs --report=full --standard=Drupal $TRAVIS_BUILD_DIR/drupal/modules/$MODULE_NAME
+
+  # Configure and run the tests
+  
+  - cd $TRAVIS_BUILD_DIR/drupal
+  - cp $TRAVIS_BUILD_DIR/drupal/modules/contrib/$MODULE_NAME/core.phpunit.xml core
+  - SIMPLETEST_DB="$DB_URL" vendor/bin/phpunit $PHPUNIT_OPTS modules/contrib/$MODULE_NAME/src/Tests
+
+after_script:
+  # Report coverage to Scrutinizer.
+  - cd $TRAVIS_BUILD_DIR/drupal/modules/contrib/$MODULE_NAME
+  - mv ../../../$COVERAGE_FILE .
+  - wget https://scrutinizer-ci.com/ocular.phar
+  - php ocular.phar code-coverage:upload --format=php-clover $COVERAGE_FILE
+
+  # Report coverage to Coveralls.io
+  - cp .coveralls.yml $TRAVIS_BUILD_DIR/drupal
+  - cd $TRAVIS_BUILD_DIR/drupal
+  - php vendor/bin/coveralls --exclude-no-stmt
