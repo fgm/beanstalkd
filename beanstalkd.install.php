@@ -89,7 +89,7 @@ function beanstalkd_requirements($phase) {
   $requirements = [];
 
   // Neither driver nor server is necessary for install/uninstall.
-  if ($phase === 'install') {
+  if ($phase !== 'runtime') {
     return $requirements;
   }
 
