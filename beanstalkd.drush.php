@@ -5,8 +5,12 @@
  * Drush plugin for Beanstalkd.
  */
 
+use Drupal\beanstalkd\Server\BeanstalkdServer;
+use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Component\Utility\Unicode;
 use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Pheanstalk\Exception\ServerException;
+use Pheanstalk\Job;
 use Pheanstalk\PheanstalkInterface;
 use Symfony\Component\Yaml\Yaml;
 
@@ -34,6 +38,45 @@ function drush_beanstalkd_drupal_queues() {
     : $manager->getBeanstalkdQueues();
 
   drush_print(Yaml::dump($queues));
+}
+
+/**
+ * Drush callback for beanstalkd-item-stats.
+ *
+ * @param mixed $item_id
+ *   The id of the item for which to get Beanstalkd information.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too.
+ */
+function drush_beanstalkd_item_stats($item_id = NULL) {
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+
+  $alias = drush_get_option('alias', BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
+
+  $definition_list = $runner->getServers($alias, TRUE);
+  if ($definition_list[$alias] === FALSE) {
+    return;
+  }
+
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+  $server = $definition_list[$alias]['server'];
+  $job = new Job($item_id, NULL);
+  try {
+    $stats = $server->statsJob('job', $job)->getArrayCopy();
+  }
+  catch (ServerException $e) {
+    $stats = FALSE;
+  }
+
+  $typed = $stats === FALSE ? FALSE : array_map(function ($element) {
+    // All numeric item statistics in Beanstalkd are integers.
+    $result = is_numeric($element) ? intval($element) : $element;
+    return $result;
+  }, $stats);
+  $result = ['stats' => [$item_id => $typed]];
+  drush_print(Yaml::dump($result, 3));
 }
 
 /**
@@ -126,62 +169,6 @@ function drush_beanstalkd_server_stats($alias = NULL) {
 }
 
 // ==== Old callbacks below ====================================================
-/**
- * Drush callback for beanstalkd-item-stats.
- *
- * @param mixed $item_id
- *   The item for which to get Beanstalkd information.
- *
- * @throws \Exception
- *   When connection cannot be established. Maybe other cases too.
- */
-function drush_beanstalkd_item_stats($item_id = NULL) {
-  beanstalkd_load_pheanstalk();
-  $queues = beanstalkd_get_host_queues();
-
-  if ($name = drush_get_option('queue', NULL)) {
-    $info = beanstalkd_get_host_queues(NULL, $name);
-    $host = $info['options']['host'];
-    $port = $info['options']['port'];
-  }
-  else {
-    $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', PheanstalkInterface::DEFAULT_PORT);
-  }
-
-  $hostname = $host . ':' . $port;
-
-  if (isset($queues[$hostname])) {
-    if ($item_id) {
-      $queue = new BeanstalkdQueue('default');
-      $queue->createConnection($host, $port);
-
-      try {
-        $item = $queue->peek($item_id);
-        $stats = $queue->statsJob($item);
-        $rows = array();
-        foreach ($stats as $key => $stat) {
-          $rows[] = array(
-            Unicode::ucfirst(str_replace('-', ' ', $key)),
-            $stat,
-          );
-        }
-
-        drush_print_table($rows);
-      }
-      catch (\Exception $e) {
-        drush_log($e->getMessage(), 'error');
-      }
-    }
-    else {
-      drush_log(dt('No item id specified.'), 'error');
-    }
-  }
-  else {
-    drush_log(dt('!host is not a valid hostname', array('!host' => $hostname)), 'error');
-  }
-}
-
 /**
  * Drush callback for beanstalkd-peek-ready.
  *

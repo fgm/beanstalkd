@@ -36,9 +36,10 @@ class BeanstalkdModuleKernelTest extends BeanstalkdTestBase {
     $servers = $this->serverFactory->getServerDefinitions();
 
     $initial = 0;
-    $expected = array_reduce($servers, function ($accu) use($initial) {
-      $accu[] = 'beanstalkd-' . $initial++;
-      return $accu;
+    $expected = array_reduce($servers, function ($carry) use($initial) {
+      $carry[] = 'beanstalkd-' . $initial;
+      $initial++;
+      return $carry;
     }, ['pheanstalk']);
     sort($expected);
     $this->assertEquals($expected, $actual, 'hook_requirements() contains the expected beanstalk-* keys');

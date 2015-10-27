@@ -412,19 +412,25 @@ class BeanstalkdServer {
    *
    * This is not compatible with normal Queue API use. Use stats() instead.
    * The drush plugin needs it to be public, in order to perform multi-queue
-   * runs, which have no direct support in Queue API.
+   * runs and job stats without a queue, which have no direct support in Queue
+   * API.
    *
    * @param string $name
    *   The name of the tube. Not used, but needed for signature consistency.
    * @param \Pheanstalk\Job $job
    *   The queried job.
    *
-   * @return object
+   * @return \ArrayObject
    *   A Pheanstalk statistics response.
    *
    * @see drush_beanstalkd_run_server()
+   * @see drush_beanstalkd_item_stats()
+   *
+   * @throws \Pheanstalk\ServerException
+   *   When the job is not found on the server.
    */
   public function statsJob($name, Job $job) {
+    /* @var \ArrayObject $stats */
     $stats = $this->driver->statsJob($job);
     return $stats;
   }

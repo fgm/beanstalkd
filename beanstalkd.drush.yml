@@ -1,12 +1,22 @@
 commands:
+  # Queue API related commands
+
   beanstalkd-drupal-queues:
-    aliases: ['btdq']
+    aliases: ['bsdq']
     description: 'List configured Drupal drush queue settings'
     options:
       all: 'Also list workers not configured for Beanstalkd handling.'
 
+  beanstalkd-queue-stats:
+    aliases: ['bsqs']
+    arguments:
+      queue: 'The name of the queue'
+    description: 'Display the stats for the specified queue'
+
+  # Server layer commands
+
   beanstalkd-run-server:
-    aliases: ['btrs']
+    aliases: ['bsrs']
     arguments:
       server: 'The name of the server. Defaults to the default server.'
     description: 'Run work from any queue on a single server'
@@ -14,39 +24,32 @@ commands:
       time-limit: 'The time during which to run work. Defaults to 0 meaning infinite.'
 
   beanstalkd-servers:
-    aliases: ['btsv']
+    aliases: ['bssv']
     description: 'List of all the beanstalkd servers'
 
-  beanstalkd-queue-stats:
-    aliases: ['btqs']
-    arguments:
-      queue: 'The name of the queue'
-    description: 'Display the stats for the specified queue'
-
   beanstalkd-server-queues:
-    aliases: ['btsq']
+    aliases: ['bssq']
     arguments:
       server: 'Specify the server to query'
     description: 'List Beanstalkd queues on one or all servers'
 
   beanstalkd-server-stats:
-    aliases: ['btss']
+    aliases: ['bsss']
     arguments:
       server: 'Specify the server to query'
     description: 'Return the Beanstalkd stats for one or all servers'
 
-  # Old commands, to be reconsidered.
+  # Beanstalkd queue level commands
 
   beanstalkd-item-stats:
-    callback: 'drush_beanstalkd_item_stats'
+    aliases: ['bsis']
     description: 'Displays stats for a specified job in the queue'
     arguments:
       'item id': 'Item id to display the stats for.'
     options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-      queue: 'Specify the queue which the job exists.'
-    aliases: ['item-stats']
+      alias: 'Specificy the host alias as defined in settings. Defaults to "default"'
+
+  # Old commands, to be reconsidered.
 
   beanstalkd-peek-ready:
     arguments:

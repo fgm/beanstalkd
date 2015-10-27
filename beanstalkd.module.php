@@ -9,60 +9,6 @@ use Drupal\Core\Site\Settings;
 use Pheanstalk\PheanstalkInterface;
 
 /**
- * Implements hook_libraries_info().
- */
-function beanstalkd_libraries_info() {
-  $info = array();
-
-  $info['pheanstalk'] = array(
-    'name' => t('Pheanstalk'),
-    'vendor url' => 'https://github.com/pda/pheanstalk',
-    'download url' => 'https://github.com/pda/pheanstalk/tags',
-    'path' => 'classes',
-    'version arguments' => array(
-      'file' => 'classes/Pheanstalk/Pheanstalk.php',
-      'pattern' => '/VERSION\s+=\s+\'(\d+\.\d+\.\d+)\';/',
-      'lines' => 20,
-      'cols' => 255,
-    ),
-    'files' => array(
-      'php' => array('Pheanstalk/PheanstalkInterface.php'),
-    ),
-    'callbacks' => array(
-      'post-load' => array('beanstalkd_init_pheanstalk'),
-    ),
-  );
-
-  return $info;
-}
-
-/**
- * Initialize Pheanstalk.
- *
- * @param array|null $library
- *   The obsolete library information about Pheanstalk 2.x.
- */
-function beanstalkd_init_pheanstalk($library) {
-  if ($library['loaded']) {
-    $autoloader = \Drupal::service('class_loader');
-    $autoloader->add('Pheanstalk', DRUPAL_ROOT . '/' . $library['library path'] . '/' . $library['path']);
-  }
-}
-
-/**
- * Load the pheanstalk library.
- */
-function beanstalkd_load_pheanstalk() {
-  $library = libraries_load('pheanstalk');
-
-  if (!$library['loaded']) {
-    throw new Exception('Unable to load Pheanstalk library');
-  }
-
-  return TRUE;
-}
-
-/**
  * Get Queue Parameters.
  *
  * @param string $name
