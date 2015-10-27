@@ -164,6 +164,30 @@ class BeanstalkdServer {
   }
 
   /**
+   * Unprotected generic command proxy.
+   *
+   * This is not safe, and not compatible with normal Queue API use.
+   *
+   * Caveat emptor: tt does not catch underlying exceptions.
+   *
+   * The drush plugin needs it to be public, in order to perform unsupported
+   * operations.
+   *
+   * @param string $command
+   *   A Pheanstalk method. The next undeclared parameters will be its own.
+   *
+   * @return mixed
+   *   Depends on the called method.
+   *
+   * @see drush_beanstalkd_peek_ready()
+   */
+  public function passThrough($command) {
+    $arguments = array_slice(func_get_args(), 1);
+    $result = call_user_func_array([$this->driver, $command], $arguments);
+    return $result;
+  }
+
+  /**
    * Add data for a job to a tube.
    *
    * To match the Drupal Queue API, this method does not support delayed jobs.

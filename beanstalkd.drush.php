@@ -5,10 +5,9 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\beanstalkd\Server\BeanstalkdServer;
-use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Drupal\Component\Utility\Unicode;
 use Drupal\beanstalkd\Queue\BeanstalkdQueue;
+use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Pheanstalk\Exception\ServerException;
 use Pheanstalk\Job;
 use Pheanstalk\PheanstalkInterface;
@@ -78,6 +77,45 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   $result = ['stats' => [$item_id => $typed]];
   drush_print(Yaml::dump($result, 3));
 }
+
+/**
+ * Drush callback for beanstalkd-peek-ready.
+ *
+ * @param null|string $name
+ *   The name of the queues on which to peek for ready items.
+ */
+function drush_beanstalkd_peek_ready($name = NULL) {
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+
+  $alias = drush_get_option('alias', BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
+
+  $definition_list = $runner->getServers($alias, TRUE);
+  if ($definition_list[$alias] === FALSE) {
+    return;
+  }
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+  $server = $definition_list[$alias]['server'];
+
+
+  $tube = drush_get_option('tube', NULL);
+
+  try {
+    /** @var \Pheanstalk\Job $job */
+    $job = $server->passThrough('peekReady', $tube);
+    $result = [
+      'job' => [
+        'id' => $job->getId(),
+        'data' => $job->getData(),
+      ],
+    ];
+  }
+  catch (ServerException $e) {
+    $result = ['job' => FALSE];
+  }
+  drush_print(Yaml::dump($result));
+}
+
 
 /**
  * Drush callback for beanstalkd-tube-stats.
@@ -169,16 +207,6 @@ function drush_beanstalkd_server_stats($alias = NULL) {
 }
 
 // ==== Old callbacks below ====================================================
-/**
- * Drush callback for beanstalkd-peek-ready.
- *
- * @param null|string $name
- *   The name of the queues on which to peek for ready items.
- */
-function drush_beanstalkd_peek_ready($name = NULL) {
-  drush_beanstalkd_peek_items('ready', $name);
-}
-
 /**
  * Drush callback for beanstalkd-peek-ready.
  *

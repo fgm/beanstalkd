@@ -43,23 +43,20 @@ commands:
 
   beanstalkd-item-stats:
     aliases: ['bsis']
-    description: 'Displays stats for a specified job in the queue'
     arguments:
       'item id': 'Item id to display the stats for.'
+    description: 'Displays stats for a specified job in the queue'
     options:
       alias: 'Specificy the host alias as defined in settings. Defaults to "default"'
 
-  # Old commands, to be reconsidered.
-
   beanstalkd-peek-ready:
-    arguments:
-      queue: 'Queue to inspect for ready items'
-    callback: 'drush_beanstalkd_peek_ready'
+    aliases: ['bspr']
     description: 'Display the next job which is ready to be run.'
     options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-    aliases: ['peek-ready']
+      alias: 'Specificy the host alias as defined in settings. Defaults to "default".'
+      tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'
+
+  # Old commands, to be reconsidered.
 
   beanstalkd-peek-buried:
     arguments:
