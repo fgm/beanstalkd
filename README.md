@@ -32,12 +32,12 @@ Installation
   2. Once your site is installed, edit your `settings.php`, setting the `$settings` variables appropriately:
       * If you want to set beanstalkd as the default queue manager then add the following to your settings.
 
-          $settings['queue_default'] = 'queue.beanstalkd';
+            $settings['queue_default'] = 'queue.beanstalkd';
 
       * Alternatively you can also set for each queue to use beanstalkd using one of these formats:
 
-          $settings['queue_service_{queue_name}'] = 'queue.beanstalkd';
-          $settings['queue_reliable_service_{queue_name}'] = 'queue.beanstalkd';
+            $settings['queue_service_{queue_name}'] = 'queue.beanstalkd';
+            $settings['queue_reliable_service_{queue_name}'] = 'queue.beanstalkd';
 
 
 _Notice_: With the current version of the module, you may add the module to your 
