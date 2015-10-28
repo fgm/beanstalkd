@@ -3,6 +3,11 @@
 /**
  * @file
  * Provide core implementation of beanstalkd support for Queues.
+ *
+ * @TODO
+ * - Consider whether reimplementing a mechanism like the "description callback"
+ *   on queues for peek* commands in Drupal 7 is worth it and, if so, find how
+ *   to implement it.
  */
 
 use Drupal\Core\Site\Settings;

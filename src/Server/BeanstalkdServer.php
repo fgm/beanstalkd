@@ -9,6 +9,7 @@
 
 namespace Drupal\beanstalkd\Server;
 
+use Drupal\Component\Utility\Unicode;
 use Pheanstalk\Command\PeekCommand;
 use Pheanstalk\Exception\ConnectionException;
 use Pheanstalk\Exception\ServerException;
@@ -188,6 +189,41 @@ class BeanstalkdServer {
   }
 
   /**
+   * Unprotected peek method.
+   *
+   * This is not compatible with normal Queue API use.
+   *
+   * The drush plugin needs it to be public, in order to perform operations
+   * without a queue, which have no direct support in Queue API.
+   *
+   * @param string $type
+   *   One of 'ready', 'delayed', 'buried'.
+   * @param null|string $tube
+   *   The name of the tube at which to peek.
+   *
+   * @return false|\Pheanstalk\Job
+   *   The next job, or false if none is available.
+   */
+  public function peek($type, $tube = NULL) {
+    assert('in_array($type, ["buried", "delayed", "ready"])');
+    $method = 'peek' . Unicode::ucfirst($type);
+    try {
+      /* @var \Pheanstalk\Job $job */
+      $job = $this->driver->{$method}($tube);
+    }
+    catch (ServerException $e) {
+      $job = FALSE;
+    }
+
+    $result = ($job === FALSE) ? FALSE : [
+      'id' => $job->getId(),
+      'data' => $job->getData(),
+    ];
+    $result = ['job' => $result];
+    return $result;
+  }
+
+  /**
    * Add data for a job to a tube.
    *
    * To match the Drupal Queue API, this method does not support delayed jobs.
@@ -298,7 +334,7 @@ class BeanstalkdServer {
       $state = PeekCommand::TYPE_READY;
     }
 
-    $method_name = 'peek' . ucfirst($state);
+    $method_name = 'peek' . Unicode::ucfirst($state);
 
     do {
       try {
@@ -450,7 +486,7 @@ class BeanstalkdServer {
    * @see drush_beanstalkd_run_server()
    * @see drush_beanstalkd_item_stats()
    *
-   * @throws \Pheanstalk\ServerException
+   * @throws \Pheanstalk\Exception\ServerException
    *   When the job is not found on the server.
    */
   public function statsJob($name, Job $job) {
@@ -494,7 +530,7 @@ class BeanstalkdServer {
     }
 
     try {
-      $method = 'stats' . ucfirst($type);
+      $method = 'stats' . Unicode::ucfirst($type);
       /* @var \ArrayObject $stats */
       $stats = $this->{$method}($name, $job);
     }

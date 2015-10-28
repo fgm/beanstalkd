@@ -49,6 +49,20 @@ commands:
     options:
       alias: 'Specificy the host alias as defined in settings. Defaults to "default"'
 
+  beanstalkd-peek-buried:
+    aliases: ['bspb']
+    description: 'Display the next job which has been buried.'
+    options:
+      alias: 'Specificy the host alias as defined in settings. Defaults to "default".'
+      tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'
+
+  beanstalkd-peek-delayed:
+    aliases: ['bspd']
+    description: 'Display the next job which has been delayed. Beware: some versions of Beanstalkd have a known bug, in which this will restart the actual job delay without making it visible in job stats.'
+    options:
+      alias: 'Specificy the host alias as defined in settings. Defaults to "default".'
+      tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'
+
   beanstalkd-peek-ready:
     aliases: ['bspr']
     description: 'Display the next job which is ready to be run.'
@@ -57,26 +71,6 @@ commands:
       tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'
 
   # Old commands, to be reconsidered.
-
-  beanstalkd-peek-buried:
-    arguments:
-      queue: 'Queue to inspect for buried items'
-    callback: 'drush_beanstalkd_peek_buried'
-    description: 'Display the next job which has been buried.'
-    options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-    aliases: ['peek-buried']
-
-  beanstalkd-peek-delayed:
-    arguments:
-      queue: 'Queue to inspect for delayed items'
-    callback: 'drush_beanstalkd_peek_delayed'
-    description: 'Display the next job which has been delayed.'
-    options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-    aliases: ['peek-delayed']
 
   beanstalkd-kick:
     arguments:
