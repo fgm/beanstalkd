@@ -149,6 +149,34 @@ class BeanstalkdServer {
   }
 
   /**
+   * Unprotected kick method.
+   *
+   * This is not compatible with normal Queue API use.
+   *
+   * The drush plugin needs it to be public, in order to perform operations
+   * without a queue, which have no direct support in Queue API.
+   *
+   * @param null|string $tube
+   *   The name of the tube at which to peek.
+   * @param int $max
+   *   The maximum number of items to kick from the tube.
+   *
+   * @return int
+   *   The number of items kicked.
+   */
+  public function kick($tube, $max) {
+    try {
+      $this->driver->useTube($tube);
+      $result = $this->driver->kick($max);
+    }
+    catch (ServerException $e) {
+      $result = 0;
+    }
+
+    return $result;
+  }
+
+  /**
    * List tube names on the server.
    *
    * @return array
@@ -201,7 +229,7 @@ class BeanstalkdServer {
    * @param null|string $tube
    *   The name of the tube at which to peek.
    *
-   * @return false|\Pheanstalk\Job
+   * @return array|false
    *   The next job, or false if none is available.
    */
   public function peek($type, $tube = NULL) {

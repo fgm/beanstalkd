@@ -5,12 +5,9 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\Component\Utility\Unicode;
-use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
 use Pheanstalk\Exception\ServerException;
 use Pheanstalk\Job;
-use Pheanstalk\PheanstalkInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -81,12 +78,13 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
 /**
  * Helper for drush beanstalkd-peek-* commands.
  *
- * Uses CLI options:
- * - alias
- * - tube
+ * Uses CLI options: alias, tube.
  *
  * @param string $type
  *   The type of item to peek at.
+ *
+ * @return array|null
+ *   NULL if the alias is not recognized. A job data array otherwise.
  */
 function _drush_beanstalkd_peek($type) {
   /* @var \Drupal\beanstalkd\Runner $runner */
@@ -96,7 +94,7 @@ function _drush_beanstalkd_peek($type) {
 
   $definition_list = $runner->getServers($alias, TRUE);
   if ($definition_list[$alias] === FALSE) {
-    return;
+    return NULL;
   }
   /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
   $server = $definition_list[$alias]['server'];
@@ -144,6 +142,38 @@ function drush_beanstalkd_peek_delayed($name = NULL) {
 function drush_beanstalkd_peek_ready($name = NULL) {
   $info = _drush_beanstalkd_peek('ready');
   drush_print(Yaml::dump($info));
+}
+
+/**
+ * Drush callback for beanstalkd-kick.
+ *
+ * @param int $max
+ *   An array of item ids to kick, or a single item id, or NULL for all items.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too.
+ */
+function drush_beanstalkd_kick($max = 1) {
+  $max = intval($max);
+
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+
+  $alias = drush_get_option('alias', BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
+
+  $definition_list = $runner->getServers($alias, TRUE);
+  if ($definition_list[$alias] === FALSE) {
+    drush_set_error('DRUSH_NO_ALIAS', dt('Alias @alias is unknown.', ['@alias' => $alias]));
+    return;
+  }
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+  $server = $definition_list[$alias]['server'];
+
+  $tube = drush_get_option('tube', BeanstalkdServerFactory::DEFAULT_QUEUE_NAME);
+
+  $count = $server->kick($tube, $max);
+
+  drush_print(\Drupal::translation()->formatPlural($count, 'One item kicked.', '@count items kicked.', []));
 }
 
 /**
@@ -247,111 +277,4 @@ function drush_beanstalkd_server_stats($alias = NULL) {
   }
 
   drush_print_r(Yaml::dump($result));
-}
-
-// ==== Old callbacks below ====================================================
-
-/**
- * Callback for array_filter() in drush_beanstalkd_{kick|_peek_items}().
- *
- * @param string $name
- *   A queue name.
- * @param string|null $type_filter
- *   Unused.
- * @param bool $init
- *   - NULL if $init,
- *   - TRUE if queue is available and contains at least one item
- *   - FALSE otherwise.
- *
- * @return bool|null
- *   As per array_filter().
- */
-function _drush_beanstalkd_filter_type($name, $type_filter = NULL, $init = FALSE) {
-  static $queue, $type;
-
-  if ($init) {
-    $queue = $name;
-    $type = $type_filter;
-    return NULL;
-  }
-
-  try {
-    $stats = $queue->statsTube($name);
-    return $stats['current-jobs-' . $type] > 0 ? TRUE : FALSE;
-  }
-  catch (\Exception $e) {
-    return FALSE;
-  }
-}
-
-/**
- * Drush callback for beanstalkd-kick.
- *
- * @param int|null|string[] $items
- *   An array of item ids to kick, or a single item id, or NULL for all items.
- *
- * @throws \Exception
- *   When connection cannot be established. Maybe other cases too.
- */
-function drush_beanstalkd_kick($items = NULL) {
-  if (!is_numeric($items)) {
-    drush_log(dt('@items is not a numeric value', array('@items' => $items)), 'error');
-    return;
-  }
-  elseif (!$items) {
-    drush_log(dt('@items needed to be a valid number greater than 0', array('@items' => $items)), 'error');
-    return;
-  }
-
-  beanstalkd_load_pheanstalk();
-  $queues = beanstalkd_get_host_queues();
-
-  if ($name = drush_get_option('queue', NULL)) {
-    $info = beanstalkd_get_host_queues(NULL, $name);
-    $host = $info['options']['host'];
-    $port = $info['options']['port'];
-  }
-  else {
-    $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', PheanstalkInterface::DEFAULT_PORT);
-  }
-
-  $hostname = $host . ':' . $port;
-
-  $name = drush_get_option('queue', NULL);
-
-  if (isset($queues[$hostname])) {
-    $queue = new BeanstalkdQueue(NULL);
-    $queue->createConnection($host, $port);
-
-    $queues = beanstalkd_get_queues($hostname);
-    $names = array_combine($queues, $queues);
-    _drush_beanstalkd_filter_type($queue, 'buried', TRUE);
-    $names = array_filter($names, '_drush_beanstalkd_filter_type');
-
-    if (!$name) {
-      if (empty($names)) {
-        drush_log(dt('There is currently no queues with buried jobs'), 'error');
-        return;
-      }
-
-      if (!$name && count($names) > 1) {
-        if (!$name = drush_choice($names, 'Select a queue to query')) {
-          return;
-        }
-      }
-      elseif (!$name && !empty($names)) {
-        $name = reset($names);
-      }
-    }
-    elseif (in_array($name, $names) === FALSE) {
-      drush_log(dt('There are currently buried items on queue @name', array('@name' => $name)), 'error');
-      return;
-    }
-
-    $queue->useTube($name);
-    $items_kicked = $queue->kick($items);
-
-    drush_log(\Drupal::translation()->formatPlural($items_kicked, '@count item kicked', '@count items kicked'), 'info');
-  }
 }
