@@ -7,8 +7,6 @@
 
 namespace Drupal\beanstalkd\Tests;
 
-use Drupal\KernelTests\KernelTestBase;
-
 /**
  * Class BeanstalkModuleUnitTest.
  *

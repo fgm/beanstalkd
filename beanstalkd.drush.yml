@@ -3,7 +3,7 @@ commands:
 
   beanstalkd-drupal-queues:
     aliases: ['bsdq']
-    description: 'List configured Drupal drush queue settings'
+    description: 'List configured Drupal drush queue settings.'
     options:
       all: 'Also list workers not configured for Beanstalkd handling.'
 
@@ -11,7 +11,7 @@ commands:
     aliases: ['bsqs']
     arguments:
       queue: 'The name of the queue'
-    description: 'Display the stats for the specified queue'
+    description: 'Display the stats for the specified queue.'
 
   # Server layer commands
 
@@ -19,75 +19,62 @@ commands:
     aliases: ['bsrs']
     arguments:
       server: 'The name of the server. Defaults to the default server.'
-    description: 'Run work from any queue on a single server'
+    description: 'Run work from any queue on a single server.'
     options:
       time-limit: 'The time during which to run work. Defaults to 0 meaning infinite.'
 
   beanstalkd-servers:
     aliases: ['bssv']
-    description: 'List of all the beanstalkd servers'
+    description: 'List of all the configured beanstalkd servers.'
 
   beanstalkd-server-queues:
     aliases: ['bssq']
     arguments:
       server: 'Specify the server to query'
-    description: 'List Beanstalkd queues on one or all servers'
+    description: 'List Beanstalkd queues on one or all servers.'
 
   beanstalkd-server-stats:
     aliases: ['bsss']
     arguments:
       server: 'Specify the server to query'
-    description: 'Return the Beanstalkd stats for one or all servers'
+    description: 'Return the Beanstalkd stats for one or all servers.'
 
   # Beanstalkd queue level commands
 
   beanstalkd-item-stats:
     aliases: ['bsis']
-    description: 'Displays stats for a specified job in the queue'
     arguments:
       'item id': 'Item id to display the stats for.'
+    description: 'Displays stats for a specified job in the queue.'
     options:
-      alias: 'Specificy the host alias as defined in settings. Defaults to "default"'
-
-  # Old commands, to be reconsidered.
-
-  beanstalkd-peek-ready:
-    arguments:
-      queue: 'Queue to inspect for ready items'
-    callback: 'drush_beanstalkd_peek_ready'
-    description: 'Display the next job which is ready to be run.'
-    options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-    aliases: ['peek-ready']
-
-  beanstalkd-peek-buried:
-    arguments:
-      queue: 'Queue to inspect for buried items'
-    callback: 'drush_beanstalkd_peek_buried'
-    description: 'Display the next job which has been buried.'
-    options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-    aliases: ['peek-buried']
-
-  beanstalkd-peek-delayed:
-    arguments:
-      queue: 'Queue to inspect for delayed items'
-    callback: 'drush_beanstalkd_peek_delayed'
-    description: 'Display the next job which has been delayed.'
-    options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-    aliases: ['peek-delayed']
+      alias: 'Specify the host alias as defined in settings. Defaults to "default".'
 
   beanstalkd-kick:
+    aliases: ['bski']
     arguments:
-      '': 'number of items to kick to allow them to be reprocessed.'
-    callback: 'drush_beanstalkd_kick'
-    description: 'Kick n items so that they will be reprocessed'
+      max: 'Maximum number of items to kick.'
+    description: 'Kick up to the maximum number of items requested, so that they will be reprocessed.'
     options:
-      host: 'Specify the host of the beanstalkd server'
-      port: 'Specify the port of the beanstalkd server'
-      queue: 'Specify the queue to kick the items on.'
-    aliases: ['kick']
+      alias: 'Specify the host alias as defined in settings. Defaults to "default".'
+      tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'
+
+  beanstalkd-peek-buried:
+    aliases: ['bspb']
+    description: 'Display the next job which has been buried.'
+    options:
+      alias: 'Specificy the host alias as defined in settings. Defaults to "default".'
+      tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'
+
+  beanstalkd-peek-delayed:
+    aliases: ['bspd']
+    description: 'Display the next job which has been delayed. Beware: some versions of Beanstalkd have a known bug, in which this will restart the actual job delay without making it visible in job stats.'
+    options:
+      alias: 'Specificy the host alias as defined in settings. Defaults to "default".'
+      tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'
+
+  beanstalkd-peek-ready:
+    aliases: ['bspr']
+    description: 'Display the next job which is ready to be run.'
+    options:
+      alias: 'Specificy the host alias as defined in settings. Defaults to "default".'
+      tube: 'Beanstalkd tube to inspect for ready items. Defaults to any tube.'

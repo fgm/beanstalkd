@@ -5,13 +5,9 @@
  * Drush plugin for Beanstalkd.
  */
 
-use Drupal\beanstalkd\Server\BeanstalkdServer;
 use Drupal\beanstalkd\Server\BeanstalkdServerFactory;
-use Drupal\Component\Utility\Unicode;
-use Drupal\beanstalkd\Queue\BeanstalkdQueue;
 use Pheanstalk\Exception\ServerException;
 use Pheanstalk\Job;
-use Pheanstalk\PheanstalkInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -77,6 +73,121 @@ function drush_beanstalkd_item_stats($item_id = NULL) {
   }, $stats);
   $result = ['stats' => [$item_id => $typed]];
   drush_print(Yaml::dump($result, 3));
+}
+
+/**
+ * Helper for drush beanstalkd-peek-* commands.
+ *
+ * Uses CLI options: alias, tube.
+ *
+ * @param string $type
+ *   The type of item to peek at.
+ *
+ * @return array|null
+ *   NULL if the alias is not recognized. A job data array otherwise.
+ */
+function _drush_beanstalkd_peek($type) {
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+
+  $alias = drush_get_option('alias', BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
+
+  $definition_list = $runner->getServers($alias, TRUE);
+  if ($definition_list[$alias] === FALSE) {
+    return NULL;
+  }
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+  $server = $definition_list[$alias]['server'];
+
+  $tube = drush_get_option('tube', NULL);
+  try {
+    $result = $server->peek($type, $tube);
+  }
+  catch (ServerException $e) {
+    $result = ['job' => FALSE];
+  }
+
+  return $result;
+}
+
+/**
+ * Drush callback for beanstalkd-peek-delayed.
+ *
+ * Known Beanstalkd bug: in some server versions, peeking at a delayed item will
+ * reset its delay before scheduling, without making this visible in the item
+ * stats delay field, but making it visible as "time-left" with a high value.
+ * Once the delay has elapsed without a peek, the time-left returns to 0, and
+ * the job will actually be provided to reserve calls.
+ *
+ * @param null|string $name
+ *   The name of the queues on which to peek for buried items.
+ *
+ * @FIXME the peek commands only work on one queue, not across queues. Change
+ * the function to always take a queue, or loop on the server queues.
+ */
+function drush_beanstalkd_peek_delayed($name = NULL) {
+  $info = _drush_beanstalkd_peek('delayed');
+  drush_print(Yaml::dump($info));
+}
+
+/**
+ * Drush callback for beanstalkd-peek-ready.
+ *
+ * @param null|string $name
+ *   The name of the queus on which to peek for ready items.
+ *
+ * @FIXME the peek commands only work on one queue, not across queues. Change
+ * the function to always take a queue, or loop on the server queues.
+ */
+function drush_beanstalkd_peek_ready($name = NULL) {
+  $info = _drush_beanstalkd_peek('ready');
+  drush_print(Yaml::dump($info));
+}
+
+/**
+ * Drush callback for beanstalkd-kick.
+ *
+ * @param int $max
+ *   An array of item ids to kick, or a single item id, or NULL for all items.
+ *
+ * @throws \Exception
+ *   When connection cannot be established. Maybe other cases too.
+ */
+function drush_beanstalkd_kick($max = 1) {
+  $max = intval($max);
+
+  /* @var \Drupal\beanstalkd\Runner $runner */
+  $runner = \Drupal::service('beanstalkd.runner');
+
+  $alias = drush_get_option('alias', BeanstalkdServerFactory::DEFAULT_SERVER_ALIAS);
+
+  $definition_list = $runner->getServers($alias, TRUE);
+  if ($definition_list[$alias] === FALSE) {
+    drush_set_error('DRUSH_NO_ALIAS', dt('Alias @alias is unknown.', ['@alias' => $alias]));
+    return;
+  }
+  /* @var \Drupal\beanstalkd\Server\BeanstalkdServer $server */
+  $server = $definition_list[$alias]['server'];
+
+  $tube = drush_get_option('tube', BeanstalkdServerFactory::DEFAULT_QUEUE_NAME);
+
+  $count = $server->kick($tube, $max);
+
+  drush_print(\Drupal::translation()->formatPlural($count, 'One item kicked.', '@count items kicked.', []));
+}
+
+/**
+ * Drush callback for beanstalkd-peek-ready.
+ *
+ * @param null|string $name
+ *   The name of the queues on which to peek for buried items.
+ *
+ * @FIXME the peek commands only work on one queue, not across queues. Change
+ * the function to always take a queue, or loop on the server queues.
+ */
+function drush_beanstalkd_peek_buried($name = NULL) {
+  $info = _drush_beanstalkd_peek('buried');
+  drush_print(Yaml::dump($info));
 }
 
 /**
@@ -166,224 +277,4 @@ function drush_beanstalkd_server_stats($alias = NULL) {
   }
 
   drush_print_r(Yaml::dump($result));
-}
-
-// ==== Old callbacks below ====================================================
-/**
- * Drush callback for beanstalkd-peek-ready.
- *
- * @param null|string $name
- *   The name of the queues on which to peek for ready items.
- */
-function drush_beanstalkd_peek_ready($name = NULL) {
-  drush_beanstalkd_peek_items('ready', $name);
-}
-
-/**
- * Drush callback for beanstalkd-peek-ready.
- *
- * @param null|string $name
- *   The name of the queues on which to peek for buried items.
- */
-function drush_beanstalkd_peek_buried($name = NULL) {
-  drush_beanstalkd_peek_items('buried', $name);
-}
-
-/**
- * Drush callback for beanstalkd-peek-ready.
- *
- * @param null|string $name
- *   The name of the queues on which to peek for buried items.
- */
-function drush_beanstalkd_peek_delayed($name = NULL) {
-  drush_beanstalkd_peek_items('delayed', $name);
-}
-
-/**
- * FIXME probably incorrect logic: $name argument is overwritten in both cases.
- *
- * @param string $type
- *   The type of items to peek at.
- * @param string $name
- *   The name of the queue in which to peek.
- *
- * @throws \Exception
- *   When connection cannot be established. Maybe other cases too.
- */
-function drush_beanstalkd_peek_items($type, $name) {
-  beanstalkd_load_pheanstalk();
-  $queues = beanstalkd_get_host_queues();
-
-  if ($name_option = drush_get_option('queue', NULL)) {
-    $name = $name_option;
-    $info = beanstalkd_get_host_queues(NULL, $name);
-    $host = $info['options']['host'];
-    $port = $info['options']['port'];
-  }
-  else {
-    $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', PheanstalkInterface::DEFAULT_PORT);
-  }
-
-  $hostname = $host . ':' . $port;
-
-  if (isset($queues[$hostname])) {
-    $queue = new BeanstalkdQueue(NULL);
-    $queue->createConnection($host, $port);
-
-    $queues = beanstalkd_get_queues($hostname);
-    $names = array_combine($queues, $queues);
-    _drush_beanstalkd_filter_type($queue, $type, TRUE);
-    $names = array_filter($names, '_drush_beanstalkd_filter_type');
-
-    if (empty($names)) {
-      drush_log(dt('There is currently no queues with !type jobs', array('!type' => $type)), 'error');
-      return;
-    }
-
-    if (!$name && count($names) > 1) {
-      if (!$name = drush_choice($names, 'Select a queue to query')) {
-        return;
-      }
-    }
-    elseif (!$name && !empty($names)) {
-      $name = reset($names);
-    }
-
-    try {
-      $queue->useTube($name);
-      $item = $queue->{'peek' . Unicode::ucfirst($type)}();
-      $stats = $queue->statsJob($item);
-      $rows = array();
-      foreach ($stats as $key => $stat) {
-        $rows[] = array(
-          Unicode::ucfirst(str_replace('-', ' ', $key)),
-          $stat,
-        );
-
-        if ($key == 'id') {
-          $info = beanstalkd_get_host_queues(NULL, $item->name);
-          if (isset($info['description callback']) && function_exists($info['description callback'])) {
-            $rows[] = array(
-              'Description',
-              $info['description callback']($item->data),
-            );
-          }
-        }
-      }
-
-      drush_print_table($rows);
-    }
-    catch (\Exception $e) {
-      drush_log($e->getMessage(), 'error');
-    }
-  }
-  else {
-    drush_log(dt('!host is not a valid hostname', array('!host' => $hostname)), 'error');
-  }
-}
-
-/**
- * Callback for array_filter() in drush_beanstalkd_{kick|_peek_items}().
- *
- * @param string $name
- *   A queue name.
- * @param string|null $type_filter
- *   Unused.
- * @param bool $init
- *   - NULL if $init,
- *   - TRUE if queue is available and contains at least one item
- *   - FALSE otherwise.
- *
- * @return bool|null
- *   As per array_filter().
- */
-function _drush_beanstalkd_filter_type($name, $type_filter = NULL, $init = FALSE) {
-  static $queue, $type;
-
-  if ($init) {
-    $queue = $name;
-    $type = $type_filter;
-    return NULL;
-  }
-
-  try {
-    $stats = $queue->statsTube($name);
-    return $stats['current-jobs-' . $type] > 0 ? TRUE : FALSE;
-  }
-  catch (\Exception $e) {
-    return FALSE;
-  }
-}
-
-/**
- * Drush callback for beanstalkd-kick.
- *
- * @param int|null|string[] $items
- *   An array of item ids to kick, or a single item id, or NULL for all items.
- *
- * @throws \Exception
- *   When connection cannot be established. Maybe other cases too.
- */
-function drush_beanstalkd_kick($items = NULL) {
-  if (!is_numeric($items)) {
-    drush_log(dt('@items is not a numeric value', array('@items' => $items)), 'error');
-    return;
-  }
-  elseif (!$items) {
-    drush_log(dt('@items needed to be a valid number greater than 0', array('@items' => $items)), 'error');
-    return;
-  }
-
-  beanstalkd_load_pheanstalk();
-  $queues = beanstalkd_get_host_queues();
-
-  if ($name = drush_get_option('queue', NULL)) {
-    $info = beanstalkd_get_host_queues(NULL, $name);
-    $host = $info['options']['host'];
-    $port = $info['options']['port'];
-  }
-  else {
-    $host = drush_get_option('host', 'localhost');
-    $port = drush_get_option('port', PheanstalkInterface::DEFAULT_PORT);
-  }
-
-  $hostname = $host . ':' . $port;
-
-  $name = drush_get_option('queue', NULL);
-
-  if (isset($queues[$hostname])) {
-    $queue = new BeanstalkdQueue(NULL);
-    $queue->createConnection($host, $port);
-
-    $queues = beanstalkd_get_queues($hostname);
-    $names = array_combine($queues, $queues);
-    _drush_beanstalkd_filter_type($queue, 'buried', TRUE);
-    $names = array_filter($names, '_drush_beanstalkd_filter_type');
-
-    if (!$name) {
-      if (empty($names)) {
-        drush_log(dt('There is currently no queues with buried jobs'), 'error');
-        return;
-      }
-
-      if (!$name && count($names) > 1) {
-        if (!$name = drush_choice($names, 'Select a queue to query')) {
-          return;
-        }
-      }
-      elseif (!$name && !empty($names)) {
-        $name = reset($names);
-      }
-    }
-    elseif (in_array($name, $names) === FALSE) {
-      drush_log(dt('There are currently buried items on queue @name', array('@name' => $name)), 'error');
-      return;
-    }
-
-    $queue->useTube($name);
-    $items_kicked = $queue->kick($items);
-
-    drush_log(\Drupal::translation()->formatPlural($items_kicked, '@count item kicked', '@count items kicked'), 'info');
-  }
 }

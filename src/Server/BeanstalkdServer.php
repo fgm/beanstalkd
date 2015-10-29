@@ -9,6 +9,7 @@
 
 namespace Drupal\beanstalkd\Server;
 
+use Drupal\Component\Utility\Unicode;
 use Pheanstalk\Command\PeekCommand;
 use Pheanstalk\Exception\ConnectionException;
 use Pheanstalk\Exception\ServerException;
@@ -148,6 +149,34 @@ class BeanstalkdServer {
   }
 
   /**
+   * Unprotected kick method.
+   *
+   * This is not compatible with normal Queue API use.
+   *
+   * The drush plugin needs it to be public, in order to perform operations
+   * without a queue, which have no direct support in Queue API.
+   *
+   * @param null|string $tube
+   *   The name of the tube at which to peek.
+   * @param int $max
+   *   The maximum number of items to kick from the tube.
+   *
+   * @return int
+   *   The number of items kicked.
+   */
+  public function kick($tube, $max) {
+    try {
+      $this->driver->useTube($tube);
+      $result = $this->driver->kick($max);
+    }
+    catch (ServerException $e) {
+      $result = 0;
+    }
+
+    return $result;
+  }
+
+  /**
    * List tube names on the server.
    *
    * @return array
@@ -161,6 +190,65 @@ class BeanstalkdServer {
       $tubes = [];
     }
     return $tubes;
+  }
+
+  /**
+   * Unprotected generic command proxy.
+   *
+   * This is not safe, and not compatible with normal Queue API use.
+   *
+   * Caveat emptor: tt does not catch underlying exceptions.
+   *
+   * The drush plugin needs it to be public, in order to perform unsupported
+   * operations.
+   *
+   * @param string $command
+   *   A Pheanstalk method. The next undeclared parameters will be its own.
+   *
+   * @return mixed
+   *   Depends on the called method.
+   *
+   * @see drush_beanstalkd_peek_ready()
+   */
+  public function passThrough($command) {
+    $arguments = array_slice(func_get_args(), 1);
+    $result = call_user_func_array([$this->driver, $command], $arguments);
+    return $result;
+  }
+
+  /**
+   * Unprotected peek method.
+   *
+   * This is not compatible with normal Queue API use.
+   *
+   * The drush plugin needs it to be public, in order to perform operations
+   * without a queue, which have no direct support in Queue API.
+   *
+   * @param string $type
+   *   One of 'ready', 'delayed', 'buried'.
+   * @param null|string $tube
+   *   The name of the tube at which to peek.
+   *
+   * @return array|false
+   *   The next job, or false if none is available.
+   */
+  public function peek($type, $tube = NULL) {
+    assert('in_array($type, ["buried", "delayed", "ready"])');
+    $method = 'peek' . Unicode::ucfirst($type);
+    try {
+      /* @var \Pheanstalk\Job $job */
+      $job = $this->driver->{$method}($tube);
+    }
+    catch (ServerException $e) {
+      $job = FALSE;
+    }
+
+    $result = ($job === FALSE) ? FALSE : [
+      'id' => $job->getId(),
+      'data' => $job->getData(),
+    ];
+    $result = ['job' => $result];
+    return $result;
   }
 
   /**
@@ -274,7 +362,7 @@ class BeanstalkdServer {
       $state = PeekCommand::TYPE_READY;
     }
 
-    $method_name = 'peek' . ucfirst($state);
+    $method_name = 'peek' . Unicode::ucfirst($state);
 
     do {
       try {
@@ -426,7 +514,7 @@ class BeanstalkdServer {
    * @see drush_beanstalkd_run_server()
    * @see drush_beanstalkd_item_stats()
    *
-   * @throws \Pheanstalk\ServerException
+   * @throws \Pheanstalk\Exception\ServerException
    *   When the job is not found on the server.
    */
   public function statsJob($name, Job $job) {
@@ -470,7 +558,7 @@ class BeanstalkdServer {
     }
 
     try {
-      $method = 'stats' . ucfirst($type);
+      $method = 'stats' . Unicode::ucfirst($type);
       /* @var \ArrayObject $stats */
       $stats = $this->{$method}($name, $job);
     }
